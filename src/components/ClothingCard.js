@@ -1,11 +1,21 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { colors } from "../constants/colors";
 
 export default function ClothingCard({ item }) {
+  const imageSource = item.processedImageUri || item.imageUri;
+
   return (
     <View style={styles.card}>
       <View style={styles.imagePlaceholder}>
-        <Text style={styles.placeholderText}>Photo</Text>
+        {imageSource ? (
+          <Image
+            source={{ uri: imageSource }}
+            style={styles.image}
+            resizeMode="contain"
+          />
+        ) : (
+          <Text style={styles.placeholderText}>Photo</Text>
+        )}
       </View>
 
       <Text style={styles.name} numberOfLines={1}>
@@ -33,6 +43,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
+    overflow: "hidden",
+  },
+
+  image: {
+    width: "100%",
+    height: "100%",
   },
 
   placeholderText: {

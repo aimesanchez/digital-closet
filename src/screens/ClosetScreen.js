@@ -7,10 +7,12 @@ import {
 } from "react-native";
 
 import { colors } from "../constants/colors";
-import { sampleClothing } from "../data/sampleClothing";
+import { useCloset } from "../context/ClosetContext";
 import ClothingCard from "../components/ClothingCard";
 
 export default function ClosetScreen() {
+  const { clothingItems } = useCloset();
+
   return (
     <ScrollView
       style={styles.container}
@@ -22,7 +24,7 @@ export default function ClosetScreen() {
         <View>
           <Text style={styles.title}>My Closet</Text>
           <Text style={styles.subtitle}>
-            {sampleClothing.length} items
+            {clothingItems.length} items
           </Text>
         </View>
 
@@ -85,7 +87,7 @@ export default function ClosetScreen() {
 
       {/* Clothing Grid */}
       <View style={styles.grid}>
-        {sampleClothing.map((item) => (
+        {clothingItems.map((item) => (
           <ClothingCard key={item.id} item={item} />
         ))}
       </View>

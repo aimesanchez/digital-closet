@@ -7,17 +7,26 @@ import {
   Image,
   Alert,
   ScrollView,
+  TextInput,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { WebView } from "react-native-webview";
 import * as FileSystem from "expo-file-system/legacy";
-
+import { useCloset } from "../context/ClosetContext";
 import { colors } from "../constants/colors";
 
 export default function AddItemScreen() {
+  const { addClothingItem } = useCloset();
+
   const [selectedImage, setSelectedImage] = useState(null);
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   const [imageForProcessing, setImageForProcessing] = useState(null);
+
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [color, setColor] = useState("");
+  const [weather, setWeather] = useState([]);
+  const [formality, setFormality] = useState("");
 
   const takePhoto = async () => {
     const permissionResult =
@@ -92,6 +101,44 @@ export default function AddItemScreen() {
     setSelectedImage(null);
   };
 
+const saveClothingItem = () => {
+  if (!selectedImage) {
+    Alert.alert("Photo needed", "Please add a clothing photo first.");
+    return;
+  }
+
+  if (!category || !color || weather.length === 0 || !formality) {
+    Alert.alert(
+      "Missing information",
+      "Please choose a category, color, weather, and formality."
+    );
+    return;
+  }
+
+  const newItem = {
+    name: name.trim() || "Untitled Item",
+    imageUri: selectedImage,
+    processedImageUri: selectedImage,
+    category,
+    color,
+    weather,
+    formality,
+    laundryStatus: "Clean",
+    timesWorn: 0,
+  };
+
+  addClothingItem(newItem);
+
+  Alert.alert("Saved!", "Your clothing item was added to your closet.");
+
+  setSelectedImage(null);
+  setImageForProcessing(null);
+  setName("");
+  setCategory("");
+  setColor("");
+  setWeather([]);
+  setFormality("");
+};
   return (
     <ScrollView
       style={styles.container}
@@ -133,6 +180,133 @@ export default function AddItemScreen() {
               Choose Another Photo
             </Text>
           </Pressable>
+          <View style={styles.formSection}>
+  <Text style={styles.fieldLabel}>Name</Text>
+
+  <TextInput
+    style={styles.input}
+    value={name}
+    onChangeText={setName}
+    placeholder="Optional, e.g. Black Tank Top"
+    placeholderTextColor={colors.secondaryText}
+  />
+
+  <Text style={styles.fieldLabel}>Category</Text>
+
+  <View style={styles.optionRow}>
+    {["Tops", "Bottoms", "Footwear", "Accessories"].map((item) => (
+      <Pressable
+        key={item}
+        style={[
+          styles.optionButton,
+          category === item && styles.optionButtonSelected,
+        ]}
+        onPress={() => setCategory(item)}
+      >
+        <Text
+          style={[
+            styles.optionText,
+            category === item && styles.optionTextSelected,
+          ]}
+        >
+          {item}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+
+  <Text style={styles.fieldLabel}>Color</Text>
+
+  <View style={styles.optionRow}>
+    {["Black", "White", "Blue", "Brown", "Red", "Green"].map((item) => (
+      <Pressable
+        key={item}
+        style={[
+          styles.optionButton,
+          color === item && styles.optionButtonSelected,
+        ]}
+        onPress={() => setColor(item)}
+      >
+        <Text
+          style={[
+            styles.optionText,
+            color === item && styles.optionTextSelected,
+          ]}
+        >
+          {item}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+
+  <Text style={styles.fieldLabel}>Weather</Text>
+
+  <View style={styles.optionRow}>
+    {["Warm", "Mild", "Cool"].map((item) => {
+      const isSelected = weather.includes(item);
+
+      return (
+        <Pressable
+          key={item}
+          style={[
+            styles.optionButton,
+            isSelected && styles.optionButtonSelected,
+          ]}
+          onPress={() => {
+            setWeather((current) =>
+              current.includes(item)
+                ? current.filter((value) => value !== item)
+                : [...current, item]
+            );
+          }}
+        >
+          <Text
+            style={[
+              styles.optionText,
+              isSelected && styles.optionTextSelected,
+            ]}
+          >
+            {item}
+          </Text>
+        </Pressable>
+      );
+    })}
+  </View>
+
+  <Text style={styles.fieldLabel}>Formality</Text>
+
+  <View style={styles.optionRow}>
+    {["Casual", "Dressy", "Formal"].map((item) => (
+      <Pressable
+        key={item}
+        style={[
+          styles.optionButton,
+          formality === item && styles.optionButtonSelected,
+        ]}
+        onPress={() => setFormality(item)}
+      >
+        <Text
+          style={[
+            styles.optionText,
+            formality === item && styles.optionTextSelected,
+          ]}
+        >
+          {item}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+
+  <Pressable
+  style={styles.saveButton}
+  onPress={saveClothingItem}
+>
+  <Text style={styles.saveButtonText}>Save Item</Text>
+</Pressable>
+
+</View>
+
+
         </>
       ) : (
         <>
@@ -331,4 +505,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+
+  formSection: {
+  marginTop: 28,
+},
+
+fieldLabel: {
+  fontSize: 14,
+  fontWeight: "700",
+  color: colors.text,
+  marginBottom: 10,
+  marginTop: 18,
+},
+
+input: {
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 16,
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  fontSize: 15,
+  color: colors.text,
+},
+
+optionRow: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 10,
+},
+
+optionButton: {
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  borderRadius: 18,
+},
+
+optionButtonSelected: {
+  backgroundColor: colors.accent,
+  borderColor: colors.accent,
+},
+
+optionText: {
+  color: colors.text,
+  fontWeight: "500",
+},
+
+optionTextSelected: {
+  color: "#FFFFFF",
+},
+saveButton: {
+  backgroundColor: colors.accent,
+  paddingVertical: 17,
+  borderRadius: 20,
+  alignItems: "center",
+  marginTop: 30,
+},
+
+saveButtonText: {
+  color: "#FFFFFF",
+  fontSize: 16,
+  fontWeight: "700",
+},
+
 });
