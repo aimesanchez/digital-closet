@@ -9,11 +9,15 @@ import {
   ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { WebView } from "react-native-webview";
+import * as FileSystem from "expo-file-system/legacy";
 
 import { colors } from "../constants/colors";
 
 export default function AddItemScreen() {
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isRemovingBackground, setIsRemovingBackground] = useState(false);
+  const [imageForProcessing, setImageForProcessing] = useState(null);
 
   const takePhoto = async () => {
     const permissionResult =
@@ -61,6 +65,29 @@ export default function AddItemScreen() {
     }
   };
 
+ const removeBackground = async () => {
+  if (!selectedImage) return;
+
+  try {
+    setIsRemovingBackground(true);
+
+    const base64 = await FileSystem.readAsStringAsync(selectedImage, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    setImageForProcessing(`data:image/jpeg;base64,${base64}`);
+  } catch (error) {
+    console.error("Background removal error:", error);
+
+    Alert.alert(
+      "Something went wrong",
+      "We couldn't prepare the image for background removal."
+    );
+
+    setIsRemovingBackground(false);
+  }
+};
+
   const clearPhoto = () => {
     setSelectedImage(null);
   };
@@ -89,9 +116,15 @@ export default function AddItemScreen() {
 
           <Text style={styles.previewLabel}>Photo selected</Text>
 
-          <Pressable style={styles.primaryButton}>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={removeBackground}
+            disabled={isRemovingBackground}
+          >
             <Text style={styles.primaryButtonText}>
-              Remove Background
+              {isRemovingBackground
+                ? "Removing Background..."
+                : "Remove Background"}
             </Text>
           </Pressable>
 
@@ -121,6 +154,82 @@ export default function AddItemScreen() {
           </Pressable>
         </>
       )}
+      {imageForProcessing && (
+  <WebView
+    style={{ width: 1, height: 1, opacity: 0 }}
+    originWhitelist={["*"]}
+    javaScriptEnabled
+    source={{
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <body>
+            <script type="module">
+              import { removeBackground } from "https://esm.sh/@imgly/background-removal";
+
+              const image = "${imageForProcessing}";
+
+              async function processImage() {
+                try {
+                  const response = await fetch(image);
+                  const blob = await response.blob();
+
+                  const resultBlob = await removeBackground(blob);
+
+                  const reader = new FileReader();
+
+                  reader.onloadend = function () {
+                    window.ReactNativeWebView.postMessage(
+                      JSON.stringify({
+                        type: "success",
+                        image: reader.result
+                      })
+                    );
+                  };
+
+                  reader.readAsDataURL(resultBlob);
+                } catch (error) {
+                  window.ReactNativeWebView.postMessage(
+                    JSON.stringify({
+                      type: "error",
+                      message: error.message
+                    })
+                  );
+                }
+              }
+
+              processImage();
+            </script>
+          </body>
+        </html>
+      `,
+    }}
+    onMessage={(event) => {
+      const data = JSON.parse(event.nativeEvent.data);
+
+      if (data.type === "success") {
+        setSelectedImage(data.image);
+        setImageForProcessing(null);
+        setIsRemovingBackground(false);
+
+        Alert.alert(
+          "Background removed!",
+          "Your clothing image now has a transparent background."
+        );
+      } else {
+        console.error("WebView background removal error:", data.message);
+
+        setImageForProcessing(null);
+        setIsRemovingBackground(false);
+
+        Alert.alert(
+          "Background removal failed",
+          data.message || "Something went wrong."
+        );
+      }
+    }}
+  />
+)}
     </ScrollView>
   );
 }
