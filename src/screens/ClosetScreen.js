@@ -12,7 +12,7 @@ import { useCloset } from "../context/ClosetContext";
 import ClothingCard from "../components/ClothingCard";
 import SafeScreen from "../components/SafeScreen";
 
-export default function ClosetScreen() {
+export default function ClosetScreen({ navigation }) {
   const { clothingItems } = useCloset();
 
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -78,7 +78,10 @@ export default function ClosetScreen() {
             </Text>
           </View>
 
-          <Pressable style={styles.addButton}>
+          <Pressable 
+          style={styles.addButton}
+          onPress={() => navigation.navigate("Add Item")}
+          >
             <Text style={styles.addButtonText}>+</Text>
           </Pressable>
         </View>
@@ -125,9 +128,6 @@ export default function ClosetScreen() {
                   </Text>
             </Pressable>
 
-          <Pressable style={styles.filterButton}>
-            <Text style={styles.filterText}>Type</Text>
-          </Pressable>
         </ScrollView>
 
         {showWeatherOptions && (
@@ -262,7 +262,10 @@ export default function ClosetScreen() {
         </View>
 
         {/* Add Clothing */}
-        <Pressable style={styles.addItemButton}>
+        <Pressable 
+        style={styles.addItemButton}
+        onPress={() => navigation.navigate("Add Item")}
+        >
           <Text style={styles.addItemText}>
             + Add clothing item
           </Text>
