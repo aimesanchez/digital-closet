@@ -1,10 +1,15 @@
 import { View, Text, StyleSheet } from "react-native";
 
+import { colors } from "../constants/colors";
+import SafeScreen from "../components/SafeScreen";
+
 export default function ProfileScreen() {
   return (
-    <View style={styles.container}>
-      <Text>Profile Screen</Text>
-    </View>
+    <SafeScreen>
+      <View style={styles.container}>
+        <Text style={styles.text}>Profile Screen</Text>
+      </View>
+    </SafeScreen>
   );
 }
 
@@ -13,5 +18,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: colors.background,
+  },
+
+  text: {
+    color: colors.text,
   },
 });

@@ -7,98 +7,104 @@ import {
 } from "react-native";
 
 import { colors } from "../constants/colors";
+import SafeScreen from "../components/SafeScreen";
 
 export default function HomeScreen() {
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Greeting */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Good morning</Text>
-          <Text style={styles.name}>Aime</Text>
-        </View>
-
-        <Pressable style={styles.profileButton}>
-          <Text style={styles.profileInitial}>A</Text>
-        </Pressable>
-      </View>
-
-      {/* Weather */}
-      <View style={styles.weatherCard}>
-        <View>
-          <Text style={styles.sectionLabel}>TODAY'S WEATHER</Text>
-          <Text style={styles.temperature}>80°F</Text>
-          <Text style={styles.weatherDescription}>
-            Sunny and warm
-          </Text>
-        </View>
-
-        <Text style={styles.weatherIcon}>☀️</Text>
-      </View>
-
-      {/* Today's Outfit */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Today's Outfit</Text>
-
-        <Pressable>
-          <Text style={styles.editText}>Edit</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.outfitCard}>
-        <View style={styles.clothingPlaceholder}>
-          <Text style={styles.placeholderText}>Top</Text>
-        </View>
-
-        <View style={styles.clothingPlaceholder}>
-          <Text style={styles.placeholderText}>Bottom</Text>
-        </View>
-
-        <View style={styles.clothingPlaceholder}>
-          <Text style={styles.placeholderText}>Shoes</Text>
-        </View>
-      </View>
-
-      {/* Suggested Accessories */}
-      <Text style={styles.sectionTitle}>Suggested Accessories</Text>
-
+    <SafeScreen>
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.accessoriesContainer}
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.accessoryCard}>
-          <Text style={styles.accessoryEmoji}>🕶️</Text>
-          <Text style={styles.accessoryName}>Sunglasses</Text>
+        {/* Greeting */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Good morning</Text>
+            <Text style={styles.name}>Aime</Text>
+          </View>
+
+          <Pressable style={styles.profileButton}>
+            <Text style={styles.profileInitial}>A</Text>
+          </Pressable>
         </View>
 
-        <View style={styles.accessoryCard}>
-          <Text style={styles.accessoryEmoji}>👜</Text>
-          <Text style={styles.accessoryName}>Bag</Text>
+        {/* Weather */}
+        <View style={styles.weatherCard}>
+          <View>
+            <Text style={styles.sectionLabel}>TODAY'S WEATHER</Text>
+            <Text style={styles.temperature}>80°F</Text>
+            <Text style={styles.weatherDescription}>
+              Sunny and warm
+            </Text>
+          </View>
+
+          <Text style={styles.weatherIcon}>☀️</Text>
         </View>
 
-        <View style={styles.accessoryCard}>
-          <Text style={styles.accessoryEmoji}>🧢</Text>
-          <Text style={styles.accessoryName}>Hat</Text>
+        {/* Today's Outfit */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Today's Outfit</Text>
+
+          <Pressable>
+            <Text style={styles.editText}>Edit</Text>
+          </Pressable>
         </View>
+
+        <View style={styles.outfitCard}>
+          <View style={styles.clothingPlaceholder}>
+            <Text style={styles.placeholderText}>Top</Text>
+          </View>
+
+          <View style={styles.clothingPlaceholder}>
+            <Text style={styles.placeholderText}>Bottom</Text>
+          </View>
+
+          <View style={styles.clothingPlaceholder}>
+            <Text style={styles.placeholderText}>Shoes</Text>
+          </View>
+        </View>
+
+        {/* Suggested Accessories */}
+        <Text style={styles.sectionTitle}>
+          Suggested Accessories
+        </Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.accessoriesContainer}
+        >
+          <View style={styles.accessoryCard}>
+            <Text style={styles.accessoryEmoji}>🕶️</Text>
+            <Text style={styles.accessoryName}>Sunglasses</Text>
+          </View>
+
+          <View style={styles.accessoryCard}>
+            <Text style={styles.accessoryEmoji}>👜</Text>
+            <Text style={styles.accessoryName}>Bag</Text>
+          </View>
+
+          <View style={styles.accessoryCard}>
+            <Text style={styles.accessoryEmoji}>🧢</Text>
+            <Text style={styles.accessoryName}>Hat</Text>
+          </View>
+        </ScrollView>
+
+        {/* Closet */}
+        <Pressable style={styles.closetButton}>
+          <View>
+            <Text style={styles.closetButtonText}>My Closet</Text>
+
+            <Text style={styles.closetButtonSubtext}>
+              Browse your wardrobe
+            </Text>
+          </View>
+
+          <Text style={styles.arrow}>›</Text>
+        </Pressable>
       </ScrollView>
-
-      {/* Closet */}
-      <Pressable style={styles.closetButton}>
-        <View>
-          <Text style={styles.closetButtonText}>My Closet</Text>
-          <Text style={styles.closetButtonSubtext}>
-            Browse your wardrobe
-          </Text>
-        </View>
-
-        <Text style={styles.arrow}>›</Text>
-      </Pressable>
-    </ScrollView>
+    </SafeScreen>
   );
 }
 

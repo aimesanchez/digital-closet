@@ -12,19 +12,24 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { WebView } from "react-native-webview";
 import * as FileSystem from "expo-file-system/legacy";
+
 import { useCloset } from "../context/ClosetContext";
 import { colors } from "../constants/colors";
+import SafeScreen from "../components/SafeScreen";
 
 export default function AddItemScreen() {
   const { addClothingItem } = useCloset();
 
   const [selectedImage, setSelectedImage] = useState(null);
-  const [isRemovingBackground, setIsRemovingBackground] = useState(false);
-  const [imageForProcessing, setImageForProcessing] = useState(null);
+  const [isRemovingBackground, setIsRemovingBackground] =
+    useState(false);
+  const [imageForProcessing, setImageForProcessing] =
+    useState(null);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [color, setColor] = useState("");
+  const [customColor, setCustomColor] = useState("");
   const [weather, setWeather] = useState([]);
   const [formality, setFormality] = useState("");
 
@@ -74,337 +79,423 @@ export default function AddItemScreen() {
     }
   };
 
- const removeBackground = async () => {
-  if (!selectedImage) return;
+  const removeBackground = async () => {
+    if (!selectedImage) return;
 
-  try {
-    setIsRemovingBackground(true);
+    try {
+      setIsRemovingBackground(true);
 
-    const base64 = await FileSystem.readAsStringAsync(selectedImage, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+      const base64 = await FileSystem.readAsStringAsync(
+        selectedImage,
+        {
+          encoding: FileSystem.EncodingType.Base64,
+        }
+      );
 
-    setImageForProcessing(`data:image/jpeg;base64,${base64}`);
-  } catch (error) {
-    console.error("Background removal error:", error);
+      setImageForProcessing(
+        `data:image/jpeg;base64,${base64}`
+      );
+    } catch (error) {
+      console.error("Background removal error:", error);
 
-    Alert.alert(
-      "Something went wrong",
-      "We couldn't prepare the image for background removal."
-    );
+      Alert.alert(
+        "Something went wrong",
+        "We couldn't prepare the image for background removal."
+      );
 
-    setIsRemovingBackground(false);
-  }
-};
+      setIsRemovingBackground(false);
+    }
+  };
 
   const clearPhoto = () => {
     setSelectedImage(null);
   };
 
-const saveClothingItem = () => {
-  if (!selectedImage) {
-    Alert.alert("Photo needed", "Please add a clothing photo first.");
-    return;
-  }
+  const saveClothingItem = () => {
+    if (!selectedImage) {
+      Alert.alert(
+        "Photo needed",
+        "Please add a clothing photo first."
+      );
+      return;
+    }
 
-  if (!category || !color || weather.length === 0 || !formality) {
+    if (
+  !category ||
+  !color ||
+  (color === "Other" && !customColor.trim()) ||
+  weather.length === 0 ||
+  !formality
+) {
+  Alert.alert(
+    "Missing information",
+    "Please choose a category, color, weather, and formality."
+  );
+  return;
+}
+
+    const newItem = {
+      name: name.trim() || "Untitled Item",
+      imageUri: selectedImage,
+      processedImageUri: selectedImage,
+      category,
+      color: color === "Other" ? customColor.trim() : color,
+      weather,
+      formality,
+      laundryStatus: "Clean",
+      timesWorn: 0,
+    };
+
+    addClothingItem(newItem);
+
     Alert.alert(
-      "Missing information",
-      "Please choose a category, color, weather, and formality."
+      "Saved!",
+      "Your clothing item was added to your closet."
     );
-    return;
-  }
 
-  const newItem = {
-    name: name.trim() || "Untitled Item",
-    imageUri: selectedImage,
-    processedImageUri: selectedImage,
-    category,
-    color,
-    weather,
-    formality,
-    laundryStatus: "Clean",
-    timesWorn: 0,
+    setSelectedImage(null);
+    setImageForProcessing(null);
+    setName("");
+    setCategory("");
+    setColor("");
+    setWeather([]);
+    setFormality("");
   };
 
-  addClothingItem(newItem);
-
-  Alert.alert("Saved!", "Your clothing item was added to your closet.");
-
-  setSelectedImage(null);
-  setImageForProcessing(null);
-  setName("");
-  setCategory("");
-  setColor("");
-  setWeather([]);
-  setFormality("");
-};
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
+    <SafeScreen>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Add Clothing</Text>
+
+        <Text style={styles.subtitle}>
+          Take a photo or choose one from your library.
+        </Text>
+
+        {selectedImage ? (
+          <>
+            <View style={styles.previewContainer}>
+              <Image
+                source={{ uri: selectedImage }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            </View>
+
+            <Text style={styles.previewLabel}>
+              Photo selected
+            </Text>
+
+            <Pressable
+              style={styles.primaryButton}
+              onPress={removeBackground}
+              disabled={isRemovingBackground}
+            >
+              <Text style={styles.primaryButtonText}>
+                {isRemovingBackground
+                  ? "Removing Background..."
+                  : "Remove Background"}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={clearPhoto}
+            >
+              <Text style={styles.secondaryButtonText}>
+                Choose Another Photo
+              </Text>
+            </Pressable>
+
+            <View style={styles.formSection}>
+              <Text style={styles.fieldLabel}>Name</Text>
+
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Optional, e.g. Black Tank Top"
+                placeholderTextColor={colors.secondaryText}
+              />
+
+              <Text style={styles.fieldLabel}>
+                Category
+              </Text>
+
+              <View style={styles.optionRow}>
+                {[
+                  "Tops",
+                  "Bottoms",
+                  "Footwear",
+                  "Accessories",
+                ].map((item) => (
+                  <Pressable
+                    key={item}
+                    style={[
+                      styles.optionButton,
+                      category === item &&
+                        styles.optionButtonSelected,
+                    ]}
+                    onPress={() => setCategory(item)}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        category === item &&
+                          styles.optionTextSelected,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={styles.fieldLabel}>Color</Text>
+
+              <View style={styles.optionRow}>
+                {[
+                  "Black",
+                  "White",
+                  "Blue",
+                  "Brown",
+                  "Red",
+                  "Green",
+                  "Other",
+                ].map((item) => (
+              <Pressable
+                key={item}
+                style={[
+                  styles.optionButton,
+                color === item && styles.optionButtonSelected,
+                ]}
+                onPress={() => {
+          setColor(item);
+
+        if (item !== "Other") {
+          setCustomColor("");
+        }
+      }}
     >
-      <Text style={styles.title}>Add Clothing</Text>
-
-      <Text style={styles.subtitle}>
-        Take a photo or choose one from your library.
+      <Text
+        style={[
+          styles.optionText,
+          color === item && styles.optionTextSelected,
+        ]}
+      >
+        {item}
       </Text>
-
-      {selectedImage ? (
-        <>
-          <View style={styles.previewContainer}>
-            <Image
-              source={{ uri: selectedImage }}
-              style={styles.previewImage}
-              resizeMode="contain"
-            />
-          </View>
-
-          <Text style={styles.previewLabel}>Photo selected</Text>
-
-          <Pressable
-            style={styles.primaryButton}
-            onPress={removeBackground}
-            disabled={isRemovingBackground}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isRemovingBackground
-                ? "Removing Background..."
-                : "Remove Background"}
-            </Text>
-          </Pressable>
-
-          <Pressable style={styles.secondaryButton} onPress={clearPhoto}>
-            <Text style={styles.secondaryButtonText}>
-              Choose Another Photo
-            </Text>
-          </Pressable>
-          <View style={styles.formSection}>
-  <Text style={styles.fieldLabel}>Name</Text>
-
-  <TextInput
-    style={styles.input}
-    value={name}
-    onChangeText={setName}
-    placeholder="Optional, e.g. Black Tank Top"
-    placeholderTextColor={colors.secondaryText}
-  />
-
-  <Text style={styles.fieldLabel}>Category</Text>
-
-  <View style={styles.optionRow}>
-    {["Tops", "Bottoms", "Footwear", "Accessories"].map((item) => (
-      <Pressable
-        key={item}
-        style={[
-          styles.optionButton,
-          category === item && styles.optionButtonSelected,
-        ]}
-        onPress={() => setCategory(item)}
-      >
-        <Text
-          style={[
-            styles.optionText,
-            category === item && styles.optionTextSelected,
-          ]}
-        >
-          {item}
-        </Text>
-      </Pressable>
-    ))}
-  </View>
-
-  <Text style={styles.fieldLabel}>Color</Text>
-
-  <View style={styles.optionRow}>
-    {["Black", "White", "Blue", "Brown", "Red", "Green"].map((item) => (
-      <Pressable
-        key={item}
-        style={[
-          styles.optionButton,
-          color === item && styles.optionButtonSelected,
-        ]}
-        onPress={() => setColor(item)}
-      >
-        <Text
-          style={[
-            styles.optionText,
-            color === item && styles.optionTextSelected,
-          ]}
-        >
-          {item}
-        </Text>
-      </Pressable>
-    ))}
-  </View>
-
-  <Text style={styles.fieldLabel}>Weather</Text>
-
-  <View style={styles.optionRow}>
-    {["Warm", "Mild", "Cool"].map((item) => {
-      const isSelected = weather.includes(item);
-
-      return (
-        <Pressable
-          key={item}
-          style={[
-            styles.optionButton,
-            isSelected && styles.optionButtonSelected,
-          ]}
-          onPress={() => {
-            setWeather((current) =>
-              current.includes(item)
-                ? current.filter((value) => value !== item)
-                : [...current, item]
-            );
-          }}
-        >
-          <Text
-            style={[
-              styles.optionText,
-              isSelected && styles.optionTextSelected,
-            ]}
-          >
-            {item}
-          </Text>
-        </Pressable>
-      );
-    })}
-  </View>
-
-  <Text style={styles.fieldLabel}>Formality</Text>
-
-  <View style={styles.optionRow}>
-    {["Casual", "Dressy", "Formal"].map((item) => (
-      <Pressable
-        key={item}
-        style={[
-          styles.optionButton,
-          formality === item && styles.optionButtonSelected,
-        ]}
-        onPress={() => setFormality(item)}
-      >
-        <Text
-          style={[
-            styles.optionText,
-            formality === item && styles.optionTextSelected,
-          ]}
-        >
-          {item}
-        </Text>
-      </Pressable>
-    ))}
-  </View>
-
-  <Pressable
-  style={styles.saveButton}
-  onPress={saveClothingItem}
->
-  <Text style={styles.saveButtonText}>Save Item</Text>
-</Pressable>
-
+    </Pressable>
+  ))}
 </View>
 
-
-        </>
-      ) : (
-        <>
-          <View style={styles.emptyPreview}>
-            <Text style={styles.emptyPreviewIcon}></Text>
-            <Text style={styles.emptyPreviewText}>
-              Your clothing photo will appear here
-            </Text>
-          </View>
-
-          <Pressable style={styles.primaryButton} onPress={takePhoto}>
-            <Text style={styles.primaryButtonText}>Take Photo</Text>
-          </Pressable>
-
-          <Pressable style={styles.secondaryButton} onPress={choosePhoto}>
-            <Text style={styles.secondaryButtonText}>
-              Choose From Library
-            </Text>
-          </Pressable>
-        </>
-      )}
-      {imageForProcessing && (
-  <WebView
-    style={{ width: 1, height: 1, opacity: 0 }}
-    originWhitelist={["*"]}
-    javaScriptEnabled
-    source={{
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <body>
-            <script type="module">
-              import { removeBackground } from "https://esm.sh/@imgly/background-removal";
-
-              const image = "${imageForProcessing}";
-
-              async function processImage() {
-                try {
-                  const response = await fetch(image);
-                  const blob = await response.blob();
-
-                  const resultBlob = await removeBackground(blob);
-
-                  const reader = new FileReader();
-
-                  reader.onloadend = function () {
-                    window.ReactNativeWebView.postMessage(
-                      JSON.stringify({
-                        type: "success",
-                        image: reader.result
-                      })
-                    );
-                  };
-
-                  reader.readAsDataURL(resultBlob);
-                } catch (error) {
-                  window.ReactNativeWebView.postMessage(
-                    JSON.stringify({
-                      type: "error",
-                      message: error.message
-                    })
-                  );
-                }
-              }
-
-              processImage();
-            </script>
-          </body>
-        </html>
-      `,
-    }}
-    onMessage={(event) => {
-      const data = JSON.parse(event.nativeEvent.data);
-
-      if (data.type === "success") {
-        setSelectedImage(data.image);
-        setImageForProcessing(null);
-        setIsRemovingBackground(false);
-
-        Alert.alert(
-          "Background removed!",
-          "Your clothing image now has a transparent background."
-        );
-      } else {
-        console.error("WebView background removal error:", data.message);
-
-        setImageForProcessing(null);
-        setIsRemovingBackground(false);
-
-        Alert.alert(
-          "Background removal failed",
-          data.message || "Something went wrong."
-        );
-      }
-    }}
+{color === "Other" && (
+  <TextInput
+    style={styles.customColorInput}
+    value={customColor}
+    onChangeText={setCustomColor}
+    placeholder="Enter a color, e.g. Burgundy"
+    placeholderTextColor={colors.secondaryText}
   />
 )}
-    </ScrollView>
+
+              <Text style={styles.fieldLabel}>Weather</Text>
+
+              <View style={styles.optionRow}>
+                {["Warm", "Mild", "Cool"].map((item) => {
+                  const isSelected =
+                    weather.includes(item);
+
+                  return (
+                    <Pressable
+                      key={item}
+                      style={[
+                        styles.optionButton,
+                        isSelected &&
+                          styles.optionButtonSelected,
+                      ]}
+                      onPress={() => {
+                        setWeather((current) =>
+                          current.includes(item)
+                            ? current.filter(
+                                (value) => value !== item
+                              )
+                            : [...current, item]
+                        );
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          isSelected &&
+                            styles.optionTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>
+                Formality
+              </Text>
+
+              <View style={styles.optionRow}>
+                {["Casual", "Dressy", "Formal"].map(
+                  (item) => (
+                    <Pressable
+                      key={item}
+                      style={[
+                        styles.optionButton,
+                        formality === item &&
+                          styles.optionButtonSelected,
+                      ]}
+                      onPress={() => setFormality(item)}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          formality === item &&
+                            styles.optionTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </Pressable>
+                  )
+                )}
+              </View>
+
+              <Pressable
+                style={styles.saveButton}
+                onPress={saveClothingItem}
+              >
+                <Text style={styles.saveButtonText}>
+                  Save Item
+                </Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.emptyPreview}>
+              <Text style={styles.emptyPreviewIcon}></Text>
+
+              <Text style={styles.emptyPreviewText}>
+                Your clothing photo will appear here
+              </Text>
+            </View>
+
+            <Pressable
+              style={styles.primaryButton}
+              onPress={takePhoto}
+            >
+              <Text style={styles.primaryButtonText}>
+                Take Photo
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={choosePhoto}
+            >
+              <Text style={styles.secondaryButtonText}>
+                Choose From Library
+              </Text>
+            </Pressable>
+          </>
+        )}
+
+        {imageForProcessing && (
+          <WebView
+            style={{ width: 1, height: 1, opacity: 0 }}
+            originWhitelist={["*"]}
+            javaScriptEnabled
+            source={{
+              html: `
+                <!DOCTYPE html>
+                <html>
+                  <body>
+                    <script type="module">
+                      import { removeBackground } from "https://esm.sh/@imgly/background-removal";
+
+                      const image = "${imageForProcessing}";
+
+                      async function processImage() {
+                        try {
+                          const response = await fetch(image);
+                          const blob = await response.blob();
+
+                          const resultBlob =
+                            await removeBackground(blob);
+
+                          const reader = new FileReader();
+
+                          reader.onloadend = function () {
+                            window.ReactNativeWebView.postMessage(
+                              JSON.stringify({
+                                type: "success",
+                                image: reader.result
+                              })
+                            );
+                          };
+
+                          reader.readAsDataURL(resultBlob);
+                        } catch (error) {
+                          window.ReactNativeWebView.postMessage(
+                            JSON.stringify({
+                              type: "error",
+                              message: error.message
+                            })
+                          );
+                        }
+                      }
+
+                      processImage();
+                    </script>
+                  </body>
+                </html>
+              `,
+            }}
+            onMessage={(event) => {
+              const data = JSON.parse(
+                event.nativeEvent.data
+              );
+
+              if (data.type === "success") {
+                setSelectedImage(data.image);
+                setImageForProcessing(null);
+                setIsRemovingBackground(false);
+
+                Alert.alert(
+                  "Background removed!",
+                  "Your clothing image now has a transparent background."
+                );
+              } else {
+                console.error(
+                  "WebView background removal error:",
+                  data.message
+                );
+
+                setImageForProcessing(null);
+                setIsRemovingBackground(false);
+
+                Alert.alert(
+                  "Background removal failed",
+                  data.message ||
+                    "Something went wrong."
+                );
+              }
+            }}
+          />
+        )}
+      </ScrollView>
+    </SafeScreen>
   );
 }
 
@@ -507,68 +598,70 @@ const styles = StyleSheet.create({
   },
 
   formSection: {
-  marginTop: 28,
-},
+    marginTop: 28,
+  },
 
-fieldLabel: {
-  fontSize: 14,
-  fontWeight: "700",
-  color: colors.text,
-  marginBottom: 10,
-  marginTop: 18,
-},
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 10,
+    marginTop: 18,
+  },
 
-input: {
-  backgroundColor: colors.surface,
-  borderWidth: 1,
-  borderColor: colors.border,
-  borderRadius: 16,
-  paddingHorizontal: 16,
-  paddingVertical: 14,
-  fontSize: 15,
-  color: colors.text,
-},
+  input: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: colors.text,
+  },
 
-optionRow: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: 10,
-},
+  optionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
 
-optionButton: {
-  backgroundColor: colors.surface,
-  borderWidth: 1,
-  borderColor: colors.border,
-  paddingHorizontal: 14,
-  paddingVertical: 10,
-  borderRadius: 18,
-},
+  optionButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
+  },
 
-optionButtonSelected: {
-  backgroundColor: colors.accent,
-  borderColor: colors.accent,
-},
+  optionButtonSelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
 
-optionText: {
-  color: colors.text,
-  fontWeight: "500",
-},
+  optionText: {
+    color: colors.text,
+    fontWeight: "500",
+  },
 
-optionTextSelected: {
-  color: "#FFFFFF",
-},
-saveButton: {
-  backgroundColor: colors.accent,
-  paddingVertical: 17,
-  borderRadius: 20,
-  alignItems: "center",
-  marginTop: 30,
-},
+  optionTextSelected: {
+    color: "#FFFFFF",
+  },
+  
 
-saveButtonText: {
-  color: "#FFFFFF",
-  fontSize: 16,
-  fontWeight: "700",
-},
+  saveButton: {
+    backgroundColor: colors.accent,
+    paddingVertical: 17,
+    borderRadius: 20,
+    alignItems: "center",
+    marginTop: 30,
+  },
 
+  saveButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  
 });

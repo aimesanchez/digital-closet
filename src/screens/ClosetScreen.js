@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -9,94 +10,265 @@ import {
 import { colors } from "../constants/colors";
 import { useCloset } from "../context/ClosetContext";
 import ClothingCard from "../components/ClothingCard";
+import SafeScreen from "../components/SafeScreen";
 
 export default function ClosetScreen() {
   const { clothingItems } = useCloset();
 
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const [selectedWeather, setSelectedWeather] = useState("All");
+  const [showWeatherOptions, setShowWeatherOptions] = useState(false);
+
+  const [selectedFormality, setSelectedFormality] = useState("All");
+  const [showFormalityOptions, setShowFormalityOptions] = useState(false);
+
+  const [selectedColor, setSelectedColor] = useState("All");
+  const [showColorOptions, setShowColorOptions] = useState(false);
+
+  const availableColors = [
+    "All",
+    ...new Set(
+      clothingItems
+      .map((item) => item.color)
+      .filter(Boolean)
+    ),
+  ];
+
+  const filteredItems = clothingItems.filter((item) => {
+  const matchesCategory =
+    selectedCategory === "All" ||
+    item.category === selectedCategory;
+
+  const matchesWeather =
+    selectedWeather === "All" ||
+    item.weather.includes(selectedWeather);
+
+  const matchesFormality =
+    selectedFormality === "All" ||
+    item.formality === selectedFormality;
+
+  const matchesColor =
+    selectedColor === "All"||
+    item.color === selectedColor;
+
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>My Closet</Text>
-          <Text style={styles.subtitle}>
-            {clothingItems.length} items
-          </Text>
+    matchesCategory &&
+    matchesWeather &&
+    matchesFormality &&
+    matchesColor
+  );
+});
+
+  return (
+    <SafeScreen>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>My Closet</Text>
+
+            <Text style={styles.subtitle}>
+              {clothingItems.length} items
+            </Text>
+          </View>
+
+          <Pressable style={styles.addButton}>
+            <Text style={styles.addButtonText}>+</Text>
+          </Pressable>
         </View>
 
-        <Pressable style={styles.addButton}>
-          <Text style={styles.addButtonText}>+</Text>
+        {/* Filters */}
+        <Text style={styles.sectionLabel}>FILTERS</Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterRow}
+        >
+          <Pressable
+            style={styles.filterButton}
+            onPress={() => setShowWeatherOptions(!showWeatherOptions)}
+        >
+          <Text style={styles.filterText}>
+            {selectedWeather === "All"
+              ? "Weather"
+              : `Weather: ${selectedWeather}`}
+          </Text>
         </Pressable>
-      </View>
 
-      {/* Filters */}
-      <Text style={styles.sectionLabel}>FILTERS</Text>
+          <Pressable
+            style={styles.filterButton}
+            onPress={() => setShowFormalityOptions(!showFormalityOptions)}
+          >
+            <Text style={styles.filterText}>
+              {selectedFormality === "All"
+                ? "Formality"
+                : `Formality: ${selectedFormality}`}
+          </Text>
+        </Pressable>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterRow}
+          <Pressable
+            style={styles.filterButton}
+            onPress={() => setShowColorOptions(!showColorOptions)}
+            >
+
+              <Text style={styles.filterText}>
+                {selectedColor === "All"
+                  ? "Color"
+                  : `Color: ${selectedColor}`}
+                  </Text>
+            </Pressable>
+
+          <Pressable style={styles.filterButton}>
+            <Text style={styles.filterText}>Type</Text>
+          </Pressable>
+        </ScrollView>
+
+        {showWeatherOptions && (
+          <View style={styles.weatherOptions}>
+            {["All", "Warm", "Mild", "Cool"].map((option) => (
+          <Pressable
+            key={option}
+            style={[
+            styles.weatherOptionButton,
+            selectedWeather === option &&
+              styles.weatherOptionButtonSelected,
+        ]}
+        onPress={() => {
+          setSelectedWeather(option);
+          setShowWeatherOptions(false);
+        }}
       >
-        <Pressable style={styles.filterButton}>
-          <Text style={styles.filterText}>Weather</Text>
-        </Pressable>
-
-        <Pressable style={styles.filterButton}>
-          <Text style={styles.filterText}>Formality</Text>
-        </Pressable>
-
-        <Pressable style={styles.filterButton}>
-          <Text style={styles.filterText}>Color</Text>
-        </Pressable>
-
-        <Pressable style={styles.filterButton}>
-          <Text style={styles.filterText}>Type</Text>
-        </Pressable>
-      </ScrollView>
-
-      {/* Categories */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryRow}
-      >
-        <Pressable style={styles.activeCategory}>
-          <Text style={styles.activeCategoryText}>All</Text>
-        </Pressable>
-
-        <Pressable style={styles.categoryButton}>
-          <Text style={styles.categoryText}>Tops</Text>
-        </Pressable>
-
-        <Pressable style={styles.categoryButton}>
-          <Text style={styles.categoryText}>Bottoms</Text>
-        </Pressable>
-
-        <Pressable style={styles.categoryButton}>
-          <Text style={styles.categoryText}>Footwear</Text>
-        </Pressable>
-
-        <Pressable style={styles.categoryButton}>
-          <Text style={styles.categoryText}>Accessories</Text>
-        </Pressable>
-      </ScrollView>
-
-      {/* Clothing Grid */}
-      <View style={styles.grid}>
-        {clothingItems.map((item) => (
-          <ClothingCard key={item.id} item={item} />
-        ))}
-      </View>
-
-      {/* Add Clothing */}
-      <Pressable style={styles.addItemButton}>
-        <Text style={styles.addItemText}>+ Add clothing item</Text>
+        <Text
+          style={[
+            styles.weatherOptionText,
+            selectedWeather === option &&
+              styles.weatherOptionTextSelected,
+          ]}
+        >
+          {option}
+        </Text>
       </Pressable>
-    </ScrollView>
+    ))}
+  </View>
+)}
+{showFormalityOptions && (
+  <View style={styles.weatherOptions}>
+    {["All", "Casual", "Dressy", "Formal"].map((option) => (
+      <Pressable
+        key={option}
+        style={[
+          styles.weatherOptionButton,
+          selectedFormality === option &&
+            styles.weatherOptionButtonSelected,
+        ]}
+        onPress={() => {
+          setSelectedFormality(option);
+          setShowFormalityOptions(false);
+        }}
+      >
+        <Text
+          style={[
+            styles.weatherOptionText,
+            selectedFormality === option &&
+              styles.weatherOptionTextSelected,
+          ]}
+        >
+          {option}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+)}
+{showColorOptions && (
+  <View style={styles.weatherOptions}>
+    {availableColors.map((option) => (
+      <Pressable
+        key={option}
+        style={[
+          styles.weatherOptionButton,
+          selectedColor === option &&
+            styles.weatherOptionButtonSelected,
+        ]}
+        onPress={() => {
+          setSelectedColor(option);
+          setShowColorOptions(false);
+        }}
+      >
+        <Text
+          style={[
+            styles.weatherOptionText,
+            selectedColor === option &&
+              styles.weatherOptionTextSelected,
+          ]}
+        >
+          {option}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+)}
+
+        {/* Categories */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryRow}
+        >
+          {[
+            "All",
+            "Tops",
+            "Bottoms",
+            "Footwear",
+            "Accessories",
+          ].map((category) => {
+            const isActive = selectedCategory === category;
+
+            return (
+              <Pressable
+                key={category}
+                style={
+                  isActive
+                    ? styles.activeCategory
+                    : styles.categoryButton
+                }
+                onPress={() => setSelectedCategory(category)}
+              >
+                <Text
+                  style={
+                    isActive
+                      ? styles.activeCategoryText
+                      : styles.categoryText
+                  }
+                >
+                  {category}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* Clothing Grid */}
+        <View style={styles.grid}>
+          {filteredItems.map((item) => (
+            <ClothingCard key={item.id} item={item} />
+          ))}
+        </View>
+
+        {/* Add Clothing */}
+        <Pressable style={styles.addItemButton}>
+          <Text style={styles.addItemText}>
+            + Add clothing item
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </SafeScreen>
   );
 }
 
@@ -223,4 +395,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+
+  weatherOptions: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 10,
+  marginBottom: 22,
+},
+
+weatherOptionButton: {
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  paddingHorizontal: 14,
+  paddingVertical: 9,
+  borderRadius: 18,
+},
+
+weatherOptionButtonSelected: {
+  backgroundColor: colors.accent,
+  borderColor: colors.accent,
+},
+
+weatherOptionText: {
+  color: colors.text,
+  fontWeight: "500",
+},
+
+weatherOptionTextSelected: {
+  color: "#FFFFFF",
+},
 });
