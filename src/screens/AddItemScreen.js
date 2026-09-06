@@ -17,7 +17,7 @@ import { useCloset } from "../context/ClosetContext";
 import { colors } from "../constants/colors";
 import SafeScreen from "../components/SafeScreen";
 
-export default function AddItemScreen() {
+export default function AddItemScreen({ navigation }) {
   const { addClothingItem } = useCloset();
 
   const [selectedImage, setSelectedImage] = useState(null);
@@ -149,19 +149,17 @@ export default function AddItemScreen() {
     addClothingItem(newItem);
 
     Alert.alert(
-      "Saved!",
-      "Your clothing item was added to your closet."
-    );
-
-    setSelectedImage(null);
-    setImageForProcessing(null);
-    setName("");
-    setCategory("");
-    setColor("");
-    setWeather([]);
-    setFormality("");
+  "Saved!",
+  "Your clothing item was added to your closet.",
+  [
+    {
+      text: "OK",
+      onPress: () => navigation.goBack(),
+    },
+  ]
+);
   };
-
+  
   return (
     <SafeScreen>
       <ScrollView
@@ -169,11 +167,22 @@ export default function AddItemScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Add Clothing</Text>
+        <View style={styles.header}>
+  <Pressable
+    style={styles.backButton}
+    onPress={() => navigation.goBack()}
+  >
+    <Text style={styles.backButtonText}>‹</Text>
+  </Pressable>
 
-        <Text style={styles.subtitle}>
-          Take a photo or choose one from your library.
-        </Text>
+  <View>
+    <Text style={styles.title}>Add Clothing</Text>
+
+    <Text style={styles.subtitle}>
+      Take a photo or choose one from your library.
+    </Text>
+  </View>
+</View>
 
         {selectedImage ? (
           <>
@@ -519,10 +528,9 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    fontSize: 15,
-    color: colors.secondaryText,
-    marginBottom: 24,
-  },
+  fontSize: 15,
+  color: colors.secondaryText,
+},
 
   emptyPreview: {
     height: 320,
@@ -663,5 +671,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+  header: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  marginBottom: 24,
+},
+
+backButton: {
+  width: 40,
+  height: 40,
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: 8,
+},
+
+backButtonText: {
+  fontSize: 32,
+  color: colors.text,
+  lineHeight: 34,
+},
   
 });

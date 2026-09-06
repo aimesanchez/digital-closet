@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import HomeScreen from "../screens/HomeScreen";
 import ClosetScreen from "../screens/ClosetScreen";
-import AddItemScreen from "../screens/AddItemScreen";
+import CreateOutfitScreen from "../screens/CreateOutfitScreen";
 import CalendarScreen from "../screens/CalendarScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 
@@ -17,7 +17,7 @@ export default function MainTabNavigator() {
             >
             <Tab.Screen name="Home" component={HomeScreen} />
             <Tab.Screen name="Closet" component={ClosetScreen} />
-            <Tab.Screen name="Add Item" component={AddItemScreen} />
+            <Tab.Screen name="Create Outfit" component={CreateOutfitScreen}/>
             <Tab.Screen name="Calendar" component={CalendarScreen} />
             <Tab.Screen name="Profile" component={ProfileScreen} />
         </Tab.Navigator>

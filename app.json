@@ -21,7 +21,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "pluggins": [
+    "plugins": [
       "react-native-fast-tflite"
     ],
     "extra": {

@@ -80,7 +80,7 @@ export default function ClosetScreen({ navigation }) {
 
           <Pressable 
           style={styles.addButton}
-          onPress={() => navigation.navigate("Add Item")}
+          onPress={() => navigation.navigate("AddItem")}
           >
             <Text style={styles.addButtonText}>+</Text>
           </Pressable>
@@ -264,7 +264,7 @@ export default function ClosetScreen({ navigation }) {
         {/* Add Clothing */}
         <Pressable 
         style={styles.addItemButton}
-        onPress={() => navigation.navigate("Add Item")}
+        onPress={() => navigation.navigate("AddItem")}
         >
           <Text style={styles.addItemText}>
             + Add clothing item
