@@ -31,7 +31,8 @@ export default function AddItemScreen({ navigation }) {
   const [color, setColor] = useState("");
   const [customColor, setCustomColor] = useState("");
   const [weather, setWeather] = useState([]);
-  const [formality, setFormality] = useState("");
+  const [occasions, setOccasions] = useState([]);
+  const [customOccasion, setCustomOccasion] = useState("");
 
   const takePhoto = async () => {
     const permissionResult =
@@ -125,11 +126,14 @@ export default function AddItemScreen({ navigation }) {
   !color ||
   (color === "Other" && !customColor.trim()) ||
   weather.length === 0 ||
-  !formality
+  occasions.length === 0 ||
+  (occasions.includes("Other") &&
+    !customOccasion.trim())
 ) {
+
   Alert.alert(
     "Missing information",
-    "Please choose a category, color, weather, and formality."
+    "Please choose a category, color, weather, and occasion."
   );
   return;
 }
@@ -141,12 +145,26 @@ export default function AddItemScreen({ navigation }) {
       category,
       color: color === "Other" ? customColor.trim() : color,
       weather,
-      formality,
       laundryStatus: "Clean",
       timesWorn: 0,
+      occasions: occasions.map((occasion) =>
+      occasion === "Other"
+      ? customOccasion.trim()
+      : occasion
+    ),
     };
 
     addClothingItem(newItem);
+    
+    setSelectedImage(null);
+    setImageForProcessing(null);
+    setName("");
+    setCategory("");
+    setColor("");
+    setCustomColor("");
+    setWeather([]);
+    setOccasions([]);
+    setCustomOccasion("");
 
     Alert.alert(
   "Saved!",
@@ -159,7 +177,7 @@ export default function AddItemScreen({ navigation }) {
   ]
 );
   };
-  
+
   return (
     <SafeScreen>
       <ScrollView
@@ -186,103 +204,105 @@ export default function AddItemScreen({ navigation }) {
 
         {selectedImage ? (
           <>
-            <View style={styles.previewContainer}>
-              <Image
-                source={{ uri: selectedImage }}
-                style={styles.previewImage}
-                resizeMode="contain"
-              />
-            </View>
+  <View style={styles.previewContainer}>
+     <Image
+      source={{ uri: selectedImage }}
+      style={styles.previewImage}
+      resizeMode="contain"
+      />
+  </View>
 
-            <Text style={styles.previewLabel}>
-              Photo selected
-            </Text>
+  <Text style={styles.previewLabel}>
+    Photo selected
+  </Text>
 
-            <Pressable
-              style={styles.primaryButton}
-              onPress={removeBackground}
-              disabled={isRemovingBackground}
-            >
-              <Text style={styles.primaryButtonText}>
-                {isRemovingBackground
-                  ? "Removing Background..."
-                  : "Remove Background"}
-              </Text>
-            </Pressable>
+  <Pressable
+    style={styles.primaryButton}
+    onPress={removeBackground}
+    disabled={isRemovingBackground}
+  >
+  <Text style={styles.primaryButtonText}>
+        {isRemovingBackground
+        ? "Removing Background..."
+        : "Remove Background"}
+  </Text>
 
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={clearPhoto}
-            >
-              <Text style={styles.secondaryButtonText}>
-                Choose Another Photo
-              </Text>
-            </Pressable>
+  </Pressable>
 
-            <View style={styles.formSection}>
-              <Text style={styles.fieldLabel}>Name</Text>
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={clearPhoto}
+  >
+  <Text style={styles.secondaryButtonText}>
+      Choose Another Photo
+  </Text>
+  </Pressable>
 
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Optional, e.g. Black Tank Top"
-                placeholderTextColor={colors.secondaryText}
-              />
+  <View style={styles.formSection}>
 
-              <Text style={styles.fieldLabel}>
-                Category
-              </Text>
+  <Text style={styles.fieldLabel}>Name</Text>
 
-              <View style={styles.optionRow}>
-                {[
-                  "Tops",
-                  "Bottoms",
-                  "Footwear",
-                  "Accessories",
-                ].map((item) => (
-                  <Pressable
-                    key={item}
-                    style={[
-                      styles.optionButton,
-                      category === item &&
-                        styles.optionButtonSelected,
-                    ]}
-                    onPress={() => setCategory(item)}
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        category === item &&
-                          styles.optionTextSelected,
-                      ]}
-                    >
-                      {item}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+  <TextInput
+    style={styles.input}
+    value={name}
+    onChangeText={setName}
+    placeholder="Optional, e.g. Black Tank Top"
+    placeholderTextColor={colors.secondaryText}
+  />
 
-              <Text style={styles.fieldLabel}>Color</Text>
+  <Text style={styles.fieldLabel}>
+    Category
+  </Text>
 
-              <View style={styles.optionRow}>
-                {[
-                  "Black",
-                  "White",
-                  "Blue",
-                  "Brown",
-                  "Red",
-                  "Green",
-                  "Other",
-                ].map((item) => (
-              <Pressable
-                key={item}
-                style={[
-                  styles.optionButton,
-                color === item && styles.optionButtonSelected,
-                ]}
-                onPress={() => {
-          setColor(item);
+  <View style={styles.optionRow}>
+    {[
+    "Tops",
+    "Bottoms",
+    "Footwear",
+    "Accessories",
+  ].map((item) => (
+  <Pressable
+    key={item}
+    style={[
+      styles.optionButton,
+      category === item &&
+      styles.optionButtonSelected,
+    ]}
+    onPress={() => setCategory(item)}
+    >
+  <Text
+    style={[
+      styles.optionText,
+      category === item &&
+      styles.optionTextSelected,
+    ]}
+    >
+      {item}
+  </Text>
+  </Pressable>
+))}
+  </View>
+
+<Text style={styles.fieldLabel}>Color</Text>
+
+<View style={styles.optionRow}>
+  {[
+    "Black",
+    "White",
+    "Blue",
+    "Brown",
+    "Red",
+    "Green",
+    "Other",
+  ].map((item) => (
+  <Pressable
+    key={item}
+    style={[
+      styles.optionButton,
+      color === item && styles.optionButtonSelected,
+    ]}
+    onPress={() => {
+      setColor(item);
 
         if (item !== "Other") {
           setCustomColor("");
@@ -311,74 +331,106 @@ export default function AddItemScreen({ navigation }) {
   />
 )}
 
-              <Text style={styles.fieldLabel}>Weather</Text>
+<Text style={styles.fieldLabel}>Weather</Text>
 
-              <View style={styles.optionRow}>
-                {["Warm", "Mild", "Cool"].map((item) => {
-                  const isSelected =
-                    weather.includes(item);
+<View style={styles.optionRow}>
+  {["Warm", "Mild", "Cool", "Cold"].map((item) => {
+    const isSelected =
+    weather.includes(item);
+    return (
 
-                  return (
-                    <Pressable
-                      key={item}
-                      style={[
-                        styles.optionButton,
-                        isSelected &&
-                          styles.optionButtonSelected,
-                      ]}
-                      onPress={() => {
-                        setWeather((current) =>
-                          current.includes(item)
-                            ? current.filter(
-                                (value) => value !== item
-                              )
-                            : [...current, item]
-                        );
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          isSelected &&
-                            styles.optionTextSelected,
-                        ]}
-                      >
-                        {item}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+<Pressable
+  key={item}
+  style={[
+  styles.optionButton,
+  isSelected &&
+  styles.optionButtonSelected,
+]}
+  onPress={() => {
+  setWeather((current) =>
+  current.includes(item)
+  ? current.filter(
+  (value) => value !== item
+ )
+  : [...current, item]
+);
+}}
 
-              <Text style={styles.fieldLabel}>
-                Formality
-              </Text>
+  >
+<Text
+  style={[
+  styles.optionText,
+  isSelected &&
+  styles.optionTextSelected,
+]}
+  >
+  {item}
+</Text>
+  </Pressable>
+  );
+  })}
+  
+  </View>
+<Text style={styles.fieldLabel}>
+  Occasion
+</Text>
 
-              <View style={styles.optionRow}>
-                {["Casual", "Dressy", "Formal"].map(
-                  (item) => (
-                    <Pressable
-                      key={item}
-                      style={[
-                        styles.optionButton,
-                        formality === item &&
-                          styles.optionButtonSelected,
-                      ]}
-                      onPress={() => setFormality(item)}
-                    >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          formality === item &&
-                            styles.optionTextSelected,
-                        ]}
-                      >
-                        {item}
-                      </Text>
-                    </Pressable>
-                  )
-                )}
-              </View>
+<View style={styles.optionRow}>
+  {[
+    "Casual",
+    "School / Work",
+    "Formal",
+    "Active / Gym",
+    "Date Night",
+    "Other",
+  ].map((item) => {
+    const isSelected = occasions.includes(item);
+
+    return (
+      <Pressable
+        key={item}
+        style={[
+          styles.optionButton,
+          isSelected && styles.optionButtonSelected,
+        ]}
+        onPress={() => {
+          if (isSelected) {
+            setOccasions(
+              occasions.filter(
+                (occasion) => occasion !== item
+              )
+            );
+
+            if (item === "Other") {
+              setCustomOccasion("");
+            }
+          } else {
+            setOccasions([...occasions, item]);
+          }
+        }}
+      >
+        <Text
+          style={[
+            styles.optionText,
+            isSelected && styles.optionTextSelected,
+          ]}
+        >
+          {item}
+        </Text>
+      </Pressable>
+    );
+  })}
+</View>
+
+{occasions.includes("Other") && (
+  <TextInput
+    style={[styles.input, { marginTop: 12 }]}
+    placeholder="Enter occasion"
+    placeholderTextColor={colors.secondaryText}
+    value={customOccasion}
+    onChangeText={setCustomOccasion}
+  />
+)}
 
               <Pressable
                 style={styles.saveButton}

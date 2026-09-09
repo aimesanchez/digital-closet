@@ -20,8 +20,8 @@ export default function ClosetScreen({ navigation }) {
   const [selectedWeather, setSelectedWeather] = useState("All");
   const [showWeatherOptions, setShowWeatherOptions] = useState(false);
 
-  const [selectedFormality, setSelectedFormality] = useState("All");
-  const [showFormalityOptions, setShowFormalityOptions] = useState(false);
+  const [selectedOccasion, setSelectedOccasion] = useState("All");
+  const [showOccasionOptions, setShowOccasionOptions] = useState(false);
 
   const [selectedColor, setSelectedColor] = useState("All");
   const [showColorOptions, setShowColorOptions] = useState(false);
@@ -35,6 +35,22 @@ export default function ClosetScreen({ navigation }) {
     ),
   ];
 
+  const defaultOccasions = [
+    "Casual",
+    "School / Work",
+    "Formal",
+    "Active / Gym", 
+    "Date Night",
+  ];
+
+  const availableOccasions = [
+    "All",
+    ...new Set([
+      ...defaultOccasions,
+      ...clothingItems.flatMap((item) => item.occasions || []),
+    ])
+  ];
+
   const filteredItems = clothingItems.filter((item) => {
   const matchesCategory =
     selectedCategory === "All" ||
@@ -42,11 +58,11 @@ export default function ClosetScreen({ navigation }) {
 
   const matchesWeather =
     selectedWeather === "All" ||
-    item.weather.includes(selectedWeather);
+    (item.weather || []).includes(selectedWeather);
 
-  const matchesFormality =
-    selectedFormality === "All" ||
-    item.formality === selectedFormality;
+  const matchesOccasion = 
+  selectedOccasion === "All" ||
+  (item.occasions || []).includes(selectedOccasion);
 
   const matchesColor =
     selectedColor === "All"||
@@ -56,7 +72,7 @@ export default function ClosetScreen({ navigation }) {
   return (
     matchesCategory &&
     matchesWeather &&
-    matchesFormality &&
+    matchesOccasion &&
     matchesColor
   );
 });
@@ -107,14 +123,14 @@ export default function ClosetScreen({ navigation }) {
 
           <Pressable
             style={styles.filterButton}
-            onPress={() => setShowFormalityOptions(!showFormalityOptions)}
+            onPress={() => setShowOccasionOptions(!showOccasionOptions)}
           >
             <Text style={styles.filterText}>
-              {selectedFormality === "All"
-                ? "Formality"
-                : `Formality: ${selectedFormality}`}
-          </Text>
-        </Pressable>
+              {selectedOccasion === "All"
+              ? "Occasion"
+              : `Occasion: ${selectedOccasion}`}
+            </Text>
+          </Pressable>
 
           <Pressable
             style={styles.filterButton}
@@ -132,7 +148,7 @@ export default function ClosetScreen({ navigation }) {
 
         {showWeatherOptions && (
           <View style={styles.weatherOptions}>
-            {["All", "Warm", "Mild", "Cool"].map((option) => (
+            {["All", "Hot", "Warm", "Cool", "Cold"].map((option) => (
           <Pressable
             key={option}
             style={[
@@ -158,27 +174,27 @@ export default function ClosetScreen({ navigation }) {
     ))}
   </View>
 )}
-{showFormalityOptions && (
+{showOccasionOptions && (
   <View style={styles.weatherOptions}>
-    {["All", "Casual", "Dressy", "Formal"].map((option) => (
+    {availableOccasions.map((option)=> (
       <Pressable
-        key={option}
-        style={[
-          styles.weatherOptionButton,
-          selectedFormality === option &&
-            styles.weatherOptionButtonSelected,
-        ]}
-        onPress={() => {
-          setSelectedFormality(option);
-          setShowFormalityOptions(false);
-        }}
+      key={option}
+      style={[
+        styles.weatherOptionButton,
+        selectedOccasion === option &&
+        styles.weatherOptionButtonSelected,
+      ]}
+      onPress={() => {
+        setSelectedOccasion(option);
+        setShowOccasionOptions(false);
+      }}
       >
         <Text
-          style={[
-            styles.weatherOptionText,
-            selectedFormality === option &&
-              styles.weatherOptionTextSelected,
-          ]}
+        style={[
+          styles.weatherOptionText,
+          selectedOccasion === option &&
+          styles.weatherOptionTextSelected,
+        ]}
         >
           {option}
         </Text>
@@ -186,6 +202,7 @@ export default function ClosetScreen({ navigation }) {
     ))}
   </View>
 )}
+
 {showColorOptions && (
   <View style={styles.weatherOptions}>
     {availableColors.map((option) => (
@@ -225,6 +242,7 @@ export default function ClosetScreen({ navigation }) {
             "All",
             "Tops",
             "Bottoms",
+            "Dresses",
             "Footwear",
             "Accessories",
           ].map((category) => {
