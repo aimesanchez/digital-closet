@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  TextInput,
 } from "react-native";
 
 import { colors } from "../constants/colors";
@@ -22,6 +23,7 @@ export default function ClosetScreen({ navigation }) {
 
   const [selectedOccasion, setSelectedOccasion] = useState("All");
   const [showOccasionOptions, setShowOccasionOptions] = useState(false);
+  const [customOccasionFilter, setCustomOccasionFilter] = useState("");
 
   const [selectedColor, setSelectedColor] = useState("All");
   const [showColorOptions, setShowColorOptions] = useState(false);
@@ -62,7 +64,22 @@ export default function ClosetScreen({ navigation }) {
 
   const matchesOccasion = 
   selectedOccasion === "All" ||
-  (item.occasions || []).includes(selectedOccasion);
+  (
+    selectedOccasion === "Other"
+    ? (item.occasions || []).some(
+      (occasion) =>
+        occasion
+      .toLowerCase()
+      .includes(
+        customOccasionFilter
+        .trim()
+        .toLowerCase()
+      )
+    )
+  :(item.occasions || []).includes(
+    selectedOccasion
+  )
+);
 
   const matchesColor =
     selectedColor === "All"||
@@ -186,7 +203,12 @@ export default function ClosetScreen({ navigation }) {
       ]}
       onPress={() => {
         setSelectedOccasion(option);
-        setShowOccasionOptions(false);
+
+        if (option !== "Other") {
+          setCustomOccasionFilter("");
+          setShowOccasionOptions(false);
+        }
+        
       }}
       >
         <Text
@@ -202,6 +224,27 @@ export default function ClosetScreen({ navigation }) {
     ))}
   </View>
 )}
+{selectedOccasion === "Other"&& (
+  <View style={styles.customOccasionContainer}>
+    <TextInput
+    style={styles.customOccasionInput}
+    placeholder="Type an occasion..."
+    placeholderTextColor={colors.secondaryText}
+    accessibilityValue={customOccasionFilter}
+    autoCapitalize="words"
+    />
+    <Pressable
+    style={style.customOccasionDoneButton}
+    onPress={() =>
+      setShowOccasionOptions(false)
+    }
+  >
+    <Text style={style.customOccasionDoneText}>
+      Done
+    </Text>
+    </Pressable>
+    </View>
+    )}
 
 {showColorOptions && (
   <View style={styles.weatherOptions}>
@@ -445,5 +488,35 @@ weatherOptionText: {
 
 weatherOptionTextSelected: {
   color: "#FFFFFF",
+},
+customOccasionContainer: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  marginBottom: 22,
+},
+
+customOccasionInput: {
+  flex: 1,
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 18,
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  color: colors.text,
+  fontSize: 14,
+},
+
+customOccasionDoneButton: {
+  backgroundColor: colors.accent,
+  borderRadius: 18,
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+},
+
+customOccasionDoneText: {
+  color: "#FFFFFF",
+  fontWeight: "600",
 },
 });
