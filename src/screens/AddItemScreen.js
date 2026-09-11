@@ -1,4 +1,9 @@
-import { useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import {
   View,
   Text,
@@ -9,30 +14,235 @@ import {
   ScrollView,
   TextInput,
 } from "react-native";
+
 import * as ImagePicker from "expo-image-picker";
-import { WebView } from "react-native-webview";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as FileSystem from "expo-file-system/legacy";
 
+import { WebView } from "react-native-webview";
+
 import { useCloset } from "../context/ClosetContext";
+
+import {
+  CLOTHING_CATEGORIES,
+  ACCESSORY_TYPES,
+  LEGWEAR_TYPES,
+  OUTERWEAR_TYPES,
+  SWEATER_TYPES,
+} from "../constants/clothingTypes";
+
 import { colors } from "../constants/colors";
 import SafeScreen from "../components/SafeScreen";
 
-export default function AddItemScreen({ navigation }) {
+export default function AddItemScreen({
+  navigation,
+}) {
   const { addClothingItem } = useCloset();
 
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [isRemovingBackground, setIsRemovingBackground] =
-    useState(false);
-  const [imageForProcessing, setImageForProcessing] =
+  const webViewRef = useRef(null);
+
+  /* -------------------------------- */
+  /* IMAGE STATE                      */
+  /* -------------------------------- */
+
+  const [selectedImage, setSelectedImage] =
     useState(null);
 
+  const [
+    processedImageUri,
+    setProcessedImageUri,
+  ] = useState(null);
+
+  const [
+    imageForProcessing,
+    setImageForProcessing,
+  ] = useState(null);
+
+  const [
+    isRemovingBackground,
+    setIsRemovingBackground,
+  ] = useState(false);
+
+  const [
+    backgroundStatus,
+    setBackgroundStatus,
+  ] = useState("idle");
+
+  const [webViewReady, setWebViewReady] =
+    useState(false);
+
+  /* -------------------------------- */
+  /* FORM STATE                       */
+  /* -------------------------------- */
+
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
+
+  const [category, setCategory] =
+    useState("");
+
+  const [subCategory, setSubCategory] =
+    useState("");
+
   const [color, setColor] = useState("");
-  const [customColor, setCustomColor] = useState("");
-  const [weather, setWeather] = useState([]);
-  const [occasions, setOccasions] = useState([]);
-  const [customOccasion, setCustomOccasion] = useState("");
+
+  const [customColor, setCustomColor] =
+    useState("");
+
+  const [weather, setWeather] =
+    useState([]);
+
+  const [occasions, setOccasions] =
+    useState([]);
+
+  const [
+    customOccasion,
+    setCustomOccasion,
+  ] = useState("");
+
+  /* -------------------------------- */
+  /* SUBCATEGORY OPTIONS              */
+  /* -------------------------------- */
+
+  const getSubcategoryOptions = () => {
+    if (category === "Accessories") {
+      return ACCESSORY_TYPES;
+    }
+
+    if (category === "Legwear") {
+      return LEGWEAR_TYPES;
+    }
+
+    if (category === "Outerwear") {
+      return OUTERWEAR_TYPES;
+    }
+
+    if (category === "Sweaters") {
+      return SWEATER_TYPES;
+    }
+
+    return [];
+  };
+
+  const subcategoryOptions =
+    getSubcategoryOptions();
+
+  /* -------------------------------- */
+  /* START BACKGROUND REMOVAL         */
+  /* -------------------------------- */
+
+  const prepareImageForBackgroundRemoval =
+    async (uri) => {
+      try {
+        setSelectedImage(uri);
+        setProcessedImageUri(null);
+
+        setIsRemovingBackground(true);
+        setBackgroundStatus("processing");
+
+        /*
+         * PERFORMANCE FIX:
+         *
+         * Do NOT send the original giant photo
+         * to the background-removal model.
+         *
+         * Resize it first.
+         */
+
+        const imageInfo =
+  await ImageManipulator.manipulateAsync(
+    uri,
+    [],
+    {
+      compress: 1,
+      format:
+        ImageManipulator.SaveFormat.JPEG,
+    }
+  );
+
+const originalWidth = imageInfo.width;
+const originalHeight = imageInfo.height;
+
+const MAX_DIMENSION = 1024;
+
+let resizeConfig = null;
+
+if (
+  originalWidth > MAX_DIMENSION ||
+  originalHeight > MAX_DIMENSION
+) {
+  if (originalWidth >= originalHeight) {
+    resizeConfig = {
+      width: MAX_DIMENSION,
+    };
+  } else {
+    resizeConfig = {
+      height: MAX_DIMENSION,
+    };
+  }
+}
+
+const resizedImage =
+  await ImageManipulator.manipulateAsync(
+    uri,
+    resizeConfig
+      ? [
+          {
+            resize: resizeConfig,
+          },
+        ]
+      : [],
+    {
+      compress: 0.75,
+      format:
+        ImageManipulator.SaveFormat.JPEG,
+    }
+  );
+
+console.log(
+  "Original image:",
+  originalWidth,
+  "x",
+  originalHeight
+);
+
+console.log(
+  "Resized image:",
+  resizedImage.width,
+  "x",
+  resizedImage.height
+);
+        const base64 =
+          await FileSystem.readAsStringAsync(
+            resizedImage.uri,
+            {
+              encoding:
+                FileSystem.EncodingType
+                  .Base64,
+            }
+          );
+
+        setImageForProcessing(
+          `data:image/jpeg;base64,${base64}`
+        );
+      } catch (error) {
+        console.error(
+          "Image preparation error:",
+          error
+        );
+
+        setIsRemovingBackground(false);
+        setBackgroundStatus("error");
+
+        Alert.alert(
+          "Image processing failed",
+          "We couldn't prepare this image for background removal."
+        );
+      }
+    };
+
+  /* -------------------------------- */
+  /* CAMERA                           */
+  /* -------------------------------- */
 
   const takePhoto = async () => {
     const permissionResult =
@@ -43,19 +253,32 @@ export default function AddItemScreen({ navigation }) {
         "Camera permission needed",
         "Please allow camera access so you can photograph clothing."
       );
+
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 1,
-    });
+    const result =
+      await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+
+        /*
+         * We do not need the full raw
+         * camera image for the closet.
+         */
+        quality: 0.8,
+      });
 
     if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
+      await prepareImageForBackgroundRemoval(
+        result.assets[0].uri
+      );
     }
   };
+
+  /* -------------------------------- */
+  /* PHOTO LIBRARY                    */
+  /* -------------------------------- */
 
   const choosePhoto = async () => {
     const permissionResult =
@@ -66,51 +289,215 @@ export default function AddItemScreen({ navigation }) {
         "Photo permission needed",
         "Please allow photo access so you can choose clothing images."
       );
+
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
-    }
-  };
-
-  const removeBackground = async () => {
-    if (!selectedImage) return;
-
-    try {
-      setIsRemovingBackground(true);
-
-      const base64 = await FileSystem.readAsStringAsync(
-        selectedImage,
+    const result =
+      await ImagePicker.launchImageLibraryAsync(
         {
-          encoding: FileSystem.EncodingType.Base64,
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          quality: 0.8,
         }
       );
 
-      setImageForProcessing(
-        `data:image/jpeg;base64,${base64}`
+    if (!result.canceled) {
+      await prepareImageForBackgroundRemoval(
+        result.assets[0].uri
       );
-    } catch (error) {
-      console.error("Background removal error:", error);
-
-      Alert.alert(
-        "Something went wrong",
-        "We couldn't prepare the image for background removal."
-      );
-
-      setIsRemovingBackground(false);
     }
   };
 
+  /* -------------------------------- */
+  /* SEND IMAGE TO PERSISTENT WEBVIEW */
+  /* -------------------------------- */
+
+  useEffect(() => {
+    if (
+      !webViewReady ||
+      !imageForProcessing ||
+      !webViewRef.current
+    ) {
+      return;
+    }
+
+    /*
+     * The WebView stays alive instead of
+     * being recreated for every image.
+     */
+
+    const script = `
+      window.processImage(
+        ${JSON.stringify(
+          imageForProcessing
+        )}
+      );
+
+      true;
+    `;
+
+    webViewRef.current.injectJavaScript(
+      script
+    );
+
+    setImageForProcessing(null);
+  }, [
+    webViewReady,
+    imageForProcessing,
+  ]);
+
+  /* -------------------------------- */
+  /* SAVE PROCESSED FILE              */
+  /* -------------------------------- */
+
+  const saveProcessedImage = async (
+    dataUrl
+  ) => {
+    try {
+      const base64Data =
+        dataUrl.replace(
+          /^data:image\/[a-zA-Z0-9.+-]+;base64,/,
+          ""
+        );
+
+      const closetDirectory =
+        `${FileSystem.documentDirectory}closet-images/`;
+
+      const directoryInfo =
+        await FileSystem.getInfoAsync(
+          closetDirectory
+        );
+
+      if (!directoryInfo.exists) {
+        await FileSystem.makeDirectoryAsync(
+          closetDirectory,
+          {
+            intermediates: true,
+          }
+        );
+      }
+
+      const processedFileUri =
+        `${closetDirectory}${Date.now()}.png`;
+
+      await FileSystem.writeAsStringAsync(
+        processedFileUri,
+        base64Data,
+        {
+          encoding:
+            FileSystem.EncodingType.Base64,
+        }
+      );
+
+      /*
+       * IMPORTANT:
+       *
+       * We store the FILE PATH in React,
+       * not the giant base64 image.
+       */
+
+      setProcessedImageUri(
+        processedFileUri
+      );
+
+      setIsRemovingBackground(false);
+      setBackgroundStatus("ready");
+    } catch (error) {
+      console.error(
+        "Processed image save error:",
+        error
+      );
+
+      setIsRemovingBackground(false);
+      setBackgroundStatus("error");
+
+      Alert.alert(
+        "Background removal failed",
+        "The background was removed, but the result could not be saved."
+      );
+    }
+  };
+
+  /* -------------------------------- */
+  /* WEBVIEW MESSAGE                  */
+  /* -------------------------------- */
+
+  const handleWebViewMessage = async (
+    event
+  ) => {
+    try {
+      const data = JSON.parse(
+        event.nativeEvent.data
+      );
+
+      if (data.type === "ready") {
+        setWebViewReady(true);
+        return;
+      }
+
+      if (data.type === "success") {
+        await saveProcessedImage(
+          data.image
+        );
+
+        return;
+      }
+
+      if (data.type === "error") {
+        console.error(
+          "WebView background removal error:",
+          data.message
+        );
+
+        setIsRemovingBackground(false);
+        setBackgroundStatus("error");
+
+        Alert.alert(
+          "Background removal failed",
+          data.message ||
+            "Something went wrong."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "WebView message error:",
+        error
+      );
+    }
+  };
+
+  /* -------------------------------- */
+  /* RETRY                            */
+  /* -------------------------------- */
+
+  const retryBackgroundRemoval =
+    async () => {
+      if (!selectedImage) {
+        return;
+      }
+
+      await prepareImageForBackgroundRemoval(
+        selectedImage
+      );
+    };
+
+  /* -------------------------------- */
+  /* CLEAR PHOTO                      */
+  /* -------------------------------- */
+
   const clearPhoto = () => {
     setSelectedImage(null);
+    setProcessedImageUri(null);
+    setImageForProcessing(null);
+
+    setIsRemovingBackground(false);
+    setBackgroundStatus("idle");
   };
+
+  /* -------------------------------- */
+  /* SAVE CLOTHING ITEM               */
+  /* -------------------------------- */
 
   const saveClothingItem = () => {
     if (!selectedImage) {
@@ -118,458 +505,921 @@ export default function AddItemScreen({ navigation }) {
         "Photo needed",
         "Please add a clothing photo first."
       );
+
+      return;
+    }
+
+    if (isRemovingBackground) {
+      Alert.alert(
+        "Still removing background",
+        "Your photo is still processing. You can keep filling out the form while it finishes."
+      );
+
+      return;
+    }
+
+    if (!processedImageUri) {
+      Alert.alert(
+        "Background not ready",
+        "Please retry background removal before saving this item."
+      );
+
       return;
     }
 
     if (
-  !category ||
-  !color ||
-  (color === "Other" && !customColor.trim()) ||
-  weather.length === 0 ||
-  occasions.length === 0 ||
-  (occasions.includes("Other") &&
-    !customOccasion.trim())
-) {
+      !category ||
+      !color ||
+      (color === "Other" &&
+        !customColor.trim()) ||
+      weather.length === 0 ||
+      occasions.length === 0 ||
+      (occasions.includes("Other") &&
+        !customOccasion.trim())
+    ) {
+      Alert.alert(
+        "Missing information",
+        "Please choose a category, color, weather, and occasion."
+      );
 
-  Alert.alert(
-    "Missing information",
-    "Please choose a category, color, weather, and occasion."
-  );
-  return;
-}
+      return;
+    }
+
+    if (
+      subcategoryOptions.length > 0 &&
+      !subCategory
+    ) {
+      Alert.alert(
+        "Choose a type",
+        `Please choose what type of ${category.toLowerCase()} this is.`
+      );
+
+      return;
+    }
 
     const newItem = {
-      name: name.trim() || "Untitled Item",
+      name:
+        name.trim() ||
+        "Untitled Item",
+
+      /*
+       * Keep the original and processed
+       * image as separate values.
+       */
+
       imageUri: selectedImage,
-      processedImageUri: selectedImage,
+
+      processedImageUri:
+        processedImageUri,
+
       category,
-      color: color === "Other" ? customColor.trim() : color,
+
+      subCategory:
+        subCategory || null,
+
+      color:
+        color === "Other"
+          ? customColor.trim()
+          : color,
+
       weather,
+
+      occasions: occasions.map(
+        (occasion) =>
+          occasion === "Other"
+            ? customOccasion.trim()
+            : occasion
+      ),
+
       laundryStatus: "Clean",
+
       timesWorn: 0,
-      occasions: occasions.map((occasion) =>
-      occasion === "Other"
-      ? customOccasion.trim()
-      : occasion
-    ),
     };
 
     addClothingItem(newItem);
-    
+
+    /*
+     * Reset form.
+     */
+
     setSelectedImage(null);
+    setProcessedImageUri(null);
     setImageForProcessing(null);
+
     setName("");
+
     setCategory("");
+    setSubCategory("");
+
     setColor("");
     setCustomColor("");
+
     setWeather([]);
+
     setOccasions([]);
     setCustomOccasion("");
 
+    setIsRemovingBackground(false);
+    setBackgroundStatus("idle");
+
     Alert.alert(
-  "Saved!",
-  "Your clothing item was added to your closet.",
-  [
-    {
-      text: "OK",
-      onPress: () => navigation.goBack(),
-    },
-  ]
-);
+      "Saved!",
+      "Your clothing item was added to your closet.",
+      [
+        {
+          text: "OK",
+
+          onPress: () =>
+            navigation.goBack(),
+        },
+      ]
+    );
   };
+
+  /* -------------------------------- */
+  /* DISPLAY IMAGE                    */
+  /* -------------------------------- */
+
+  const displayImage =
+    processedImageUri ||
+    selectedImage;
+
+  /* -------------------------------- */
+  /* UI                               */
+  /* -------------------------------- */
 
   return (
     <SafeScreen>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
+        keyboardShouldPersistTaps="handled"
       >
+        {/* HEADER */}
+
         <View style={styles.header}>
-  <Pressable
-    style={styles.backButton}
-    onPress={() => navigation.goBack()}
-  >
-    <Text style={styles.backButtonText}>‹</Text>
-  </Pressable>
+          <Pressable
+            style={styles.backButton}
+            onPress={() =>
+              navigation.goBack()
+            }
+          >
+            <Text
+              style={
+                styles.backButtonText
+              }
+            >
+              ‹
+            </Text>
+          </Pressable>
 
-  <View>
-    <Text style={styles.title}>Add Clothing</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>
+              Add Clothing
+            </Text>
 
-    <Text style={styles.subtitle}>
-      Take a photo or choose one from your library.
-    </Text>
-  </View>
-</View>
+            <Text
+              style={styles.subtitle}
+            >
+              Take a photo or choose one
+              from your library.
+            </Text>
+          </View>
+        </View>
+
+        {/* PHOTO */}
 
         {selectedImage ? (
           <>
-  <View style={styles.previewContainer}>
-     <Image
-      source={{ uri: selectedImage }}
-      style={styles.previewImage}
-      resizeMode="contain"
-      />
-  </View>
+            <View
+              style={
+                styles.previewContainer
+              }
+            >
+              <Image
+                source={{
+                  uri: displayImage,
+                }}
+                style={
+                  styles.previewImage
+                }
+                resizeMode="contain"
+              />
+            </View>
 
-  <Text style={styles.previewLabel}>
-    Photo selected
-  </Text>
+            {/* PROCESSING STATUS */}
 
-  <Pressable
-    style={styles.primaryButton}
-    onPress={removeBackground}
-    disabled={isRemovingBackground}
-  >
-  <Text style={styles.primaryButtonText}>
-        {isRemovingBackground
-        ? "Removing Background..."
-        : "Remove Background"}
-  </Text>
+            {backgroundStatus ===
+              "processing" && (
+              <View
+                style={
+                  styles.statusContainer
+                }
+              >
+                <Text
+                  style={
+                    styles.processingText
+                  }
+                >
+                  Removing background...
+                </Text>
 
-  </Pressable>
+                <Text
+                  style={
+                    styles.statusSubtext
+                  }
+                >
+                  You can keep filling out
+                  your clothing details.
+                </Text>
+              </View>
+            )}
 
-  <Pressable
-    style={styles.secondaryButton}
-    onPress={clearPhoto}
-  >
-  <Text style={styles.secondaryButtonText}>
-      Choose Another Photo
-  </Text>
-  </Pressable>
+            {backgroundStatus ===
+              "ready" && (
+              <View
+                style={
+                  styles.statusContainer
+                }
+              >
+                <Text
+                  style={
+                    styles.readyText
+                  }
+                >
+                  ✓ Background removed
+                </Text>
+              </View>
+            )}
 
-  <View style={styles.formSection}>
+            {backgroundStatus ===
+              "error" && (
+              <Pressable
+                style={
+                  styles.retryButton
+                }
+                onPress={
+                  retryBackgroundRemoval
+                }
+              >
+                <Text
+                  style={
+                    styles.retryButtonText
+                  }
+                >
+                  Retry Background Removal
+                </Text>
+              </Pressable>
+            )}
 
-  <Text style={styles.fieldLabel}>Name</Text>
+            <Pressable
+              style={
+                styles.secondaryButton
+              }
+              onPress={clearPhoto}
+            >
+              <Text
+                style={
+                  styles.secondaryButtonText
+                }
+              >
+                Choose Another Photo
+              </Text>
+            </Pressable>
 
-  <TextInput
-    style={styles.input}
-    value={name}
-    onChangeText={setName}
-    placeholder="Optional, e.g. Black Tank Top"
-    placeholderTextColor={colors.secondaryText}
-  />
+            {/* FORM */}
 
-  <Text style={styles.fieldLabel}>
-    Category
-  </Text>
+            <View
+              style={styles.formSection}
+            >
+              {/* NAME */}
 
-  <View style={styles.optionRow}>
-    {[
-    "Tops",
-    "Bottoms",
-    "Footwear",
-    "Accessories",
-  ].map((item) => (
-  <Pressable
-    key={item}
-    style={[
-      styles.optionButton,
-      category === item &&
-      styles.optionButtonSelected,
-    ]}
-    onPress={() => setCategory(item)}
-    >
-  <Text
-    style={[
-      styles.optionText,
-      category === item &&
-      styles.optionTextSelected,
-    ]}
-    >
-      {item}
-  </Text>
-  </Pressable>
-))}
-  </View>
+              <Text
+                style={
+                  styles.fieldLabel
+                }
+              >
+                Name
+              </Text>
 
-<Text style={styles.fieldLabel}>Color</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Optional, e.g. Black Tank Top"
+                placeholderTextColor={
+                  colors.secondaryText
+                }
+              />
 
-<View style={styles.optionRow}>
-  {[
-    "Black",
-    "White",
-    "Blue",
-    "Brown",
-    "Red",
-    "Green",
-    "Other",
-  ].map((item) => (
-  <Pressable
-    key={item}
-    style={[
-      styles.optionButton,
-      color === item && styles.optionButtonSelected,
-    ]}
-    onPress={() => {
-      setColor(item);
+              {/* CATEGORY */}
 
-        if (item !== "Other") {
-          setCustomColor("");
-        }
-      }}
-    >
-      <Text
-        style={[
-          styles.optionText,
-          color === item && styles.optionTextSelected,
-        ]}
-      >
-        {item}
-      </Text>
-    </Pressable>
-  ))}
-</View>
+              <Text
+                style={
+                  styles.fieldLabel
+                }
+              >
+                Category
+              </Text>
 
-{color === "Other" && (
-  <TextInput
-    style={styles.customColorInput}
-    value={customColor}
-    onChangeText={setCustomColor}
-    placeholder="Enter a color, e.g. Burgundy"
-    placeholderTextColor={colors.secondaryText}
-  />
-)}
+              <View
+                style={styles.optionRow}
+              >
+                {CLOTHING_CATEGORIES.map(
+                  (item) => {
+                    const isSelected =
+                      category === item;
 
-<Text style={styles.fieldLabel}>Weather</Text>
+                    return (
+                      <Pressable
+                        key={item}
+                        style={[
+                          styles.optionButton,
 
-<View style={styles.optionRow}>
-  {["Warm", "Mild", "Cool", "Cold"].map((item) => {
-    const isSelected =
-    weather.includes(item);
-    return (
+                          isSelected &&
+                            styles.optionButtonSelected,
+                        ]}
+                        onPress={() => {
+                          setCategory(item);
 
-<Pressable
-  key={item}
-  style={[
-  styles.optionButton,
-  isSelected &&
-  styles.optionButtonSelected,
-]}
-  onPress={() => {
-  setWeather((current) =>
-  current.includes(item)
-  ? current.filter(
-  (value) => value !== item
- )
-  : [...current, item]
-);
-}}
+                          /*
+                           * Reset subtype when
+                           * category changes.
+                           */
 
-  >
-<Text
-  style={[
-  styles.optionText,
-  isSelected &&
-  styles.optionTextSelected,
-]}
-  >
-  {item}
-</Text>
-  </Pressable>
-  );
-  })}
-  
-  </View>
-<Text style={styles.fieldLabel}>
-  Occasion
-</Text>
+                          setSubCategory(
+                            ""
+                          );
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.optionText,
 
-<View style={styles.optionRow}>
-  {[
-    "Casual",
-    "School / Work",
-    "Formal",
-    "Active / Gym",
-    "Date Night",
-    "Other",
-  ].map((item) => {
-    const isSelected = occasions.includes(item);
+                            isSelected &&
+                              styles.optionTextSelected,
+                          ]}
+                        >
+                          {item}
+                        </Text>
+                      </Pressable>
+                    );
+                  }
+                )}
+              </View>
 
-    return (
-      <Pressable
-        key={item}
-        style={[
-          styles.optionButton,
-          isSelected && styles.optionButtonSelected,
-        ]}
-        onPress={() => {
-          if (isSelected) {
-            setOccasions(
-              occasions.filter(
-                (occasion) => occasion !== item
-              )
-            );
+              {/* SUBCATEGORY */}
 
-            if (item === "Other") {
-              setCustomOccasion("");
-            }
-          } else {
-            setOccasions([...occasions, item]);
-          }
-        }}
-      >
-        <Text
-          style={[
-            styles.optionText,
-            isSelected && styles.optionTextSelected,
-          ]}
-        >
-          {item}
-        </Text>
-      </Pressable>
-    );
-  })}
-</View>
+              {subcategoryOptions.length >
+                0 && (
+                <>
+                  <Text
+                    style={
+                      styles.fieldLabel
+                    }
+                  >
+                    Type
+                  </Text>
 
-{occasions.includes("Other") && (
-  <TextInput
-    style={[styles.input, { marginTop: 12 }]}
-    placeholder="Enter occasion"
-    placeholderTextColor={colors.secondaryText}
-    value={customOccasion}
-    onChangeText={setCustomOccasion}
-  />
-)}
+                  <View
+                    style={
+                      styles.optionRow
+                    }
+                  >
+                    {subcategoryOptions.map(
+                      (item) => {
+                        const isSelected =
+                          subCategory ===
+                          item;
+
+                        return (
+                          <Pressable
+                            key={item}
+                            style={[
+                              styles.optionButton,
+
+                              isSelected &&
+                                styles.optionButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSubCategory(
+                                item
+                              )
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.optionText,
+
+                                isSelected &&
+                                  styles.optionTextSelected,
+                              ]}
+                            >
+                              {item}
+                            </Text>
+                          </Pressable>
+                        );
+                      }
+                    )}
+                  </View>
+                </>
+              )}
+
+              {/* COLOR */}
+
+              <Text
+                style={
+                  styles.fieldLabel
+                }
+              >
+                Color
+              </Text>
+
+              <View
+                style={styles.optionRow}
+              >
+                {[
+                  "Black",
+                  "White",
+                  "Blue",
+                  "Brown",
+                  "Red",
+                  "Green",
+                  "Other",
+                ].map((item) => {
+                  const isSelected =
+                    color === item;
+
+                  return (
+                    <Pressable
+                      key={item}
+                      style={[
+                        styles.optionButton,
+
+                        isSelected &&
+                          styles.optionButtonSelected,
+                      ]}
+                      onPress={() => {
+                        setColor(item);
+
+                        if (
+                          item !== "Other"
+                        ) {
+                          setCustomColor(
+                            ""
+                          );
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+
+                          isSelected &&
+                            styles.optionTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {color === "Other" && (
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.customInput,
+                  ]}
+                  value={customColor}
+                  onChangeText={
+                    setCustomColor
+                  }
+                  placeholder="Enter a color, e.g. Burgundy"
+                  placeholderTextColor={
+                    colors.secondaryText
+                  }
+                />
+              )}
+
+              {/* WEATHER */}
+
+              <Text
+                style={
+                  styles.fieldLabel
+                }
+              >
+                Weather
+              </Text>
+
+              <View
+                style={styles.optionRow}
+              >
+                {[
+                  "Hot",
+                  "Warm",
+                  "Cool",
+                  "Cold",
+                ].map((item) => {
+                  const isSelected =
+                    weather.includes(
+                      item
+                    );
+
+                  return (
+                    <Pressable
+                      key={item}
+                      style={[
+                        styles.optionButton,
+
+                        isSelected &&
+                          styles.optionButtonSelected,
+                      ]}
+                      onPress={() => {
+                        setWeather(
+                          (
+                            currentWeather
+                          ) =>
+                            currentWeather.includes(
+                              item
+                            )
+                              ? currentWeather.filter(
+                                  (
+                                    value
+                                  ) =>
+                                    value !==
+                                    item
+                                )
+                              : [
+                                  ...currentWeather,
+                                  item,
+                                ]
+                        );
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+
+                          isSelected &&
+                            styles.optionTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* OCCASION */}
+
+              <Text
+                style={
+                  styles.fieldLabel
+                }
+              >
+                Occasion
+              </Text>
+
+              <View
+                style={styles.optionRow}
+              >
+                {[
+                  "Casual",
+                  "School / Work",
+                  "Formal",
+                  "Active / Gym",
+                  "Date Night",
+                  "Other",
+                ].map((item) => {
+                  const isSelected =
+                    occasions.includes(
+                      item
+                    );
+
+                  return (
+                    <Pressable
+                      key={item}
+                      style={[
+                        styles.optionButton,
+
+                        isSelected &&
+                          styles.optionButtonSelected,
+                      ]}
+                      onPress={() => {
+                        setOccasions(
+                          (
+                            currentOccasions
+                          ) =>
+                            currentOccasions.includes(
+                              item
+                            )
+                              ? currentOccasions.filter(
+                                  (
+                                    occasion
+                                  ) =>
+                                    occasion !==
+                                    item
+                                )
+                              : [
+                                  ...currentOccasions,
+                                  item,
+                                ]
+                        );
+
+                        if (
+                          isSelected &&
+                          item === "Other"
+                        ) {
+                          setCustomOccasion(
+                            ""
+                          );
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+
+                          isSelected &&
+                            styles.optionTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {occasions.includes(
+                "Other"
+              ) && (
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.customInput,
+                  ]}
+                  placeholder="Enter occasion"
+                  placeholderTextColor={
+                    colors.secondaryText
+                  }
+                  value={
+                    customOccasion
+                  }
+                  onChangeText={
+                    setCustomOccasion
+                  }
+                />
+              )}
+
+              {/* SAVE */}
 
               <Pressable
-                style={styles.saveButton}
-                onPress={saveClothingItem}
+                style={[
+                  styles.saveButton,
+
+                  isRemovingBackground &&
+                    styles.saveButtonDisabled,
+                ]}
+                onPress={
+                  saveClothingItem
+                }
               >
-                <Text style={styles.saveButtonText}>
-                  Save Item
+                <Text
+                  style={
+                    styles.saveButtonText
+                  }
+                >
+                  {isRemovingBackground
+                    ? "Processing Photo..."
+                    : "Save Item"}
                 </Text>
               </Pressable>
             </View>
           </>
         ) : (
           <>
-            <View style={styles.emptyPreview}>
-              <Text style={styles.emptyPreviewIcon}></Text>
+            {/* EMPTY PHOTO STATE */}
 
-              <Text style={styles.emptyPreviewText}>
-                Your clothing photo will appear here
+            <View
+              style={styles.emptyPreview}
+            >
+              <Text
+                style={
+                  styles.emptyPreviewText
+                }
+              >
+                Your clothing photo will
+                appear here
               </Text>
             </View>
 
             <Pressable
-              style={styles.primaryButton}
+              style={
+                styles.primaryButton
+              }
               onPress={takePhoto}
             >
-              <Text style={styles.primaryButtonText}>
+              <Text
+                style={
+                  styles.primaryButtonText
+                }
+              >
                 Take Photo
               </Text>
             </Pressable>
 
             <Pressable
-              style={styles.secondaryButton}
+              style={
+                styles.secondaryButton
+              }
               onPress={choosePhoto}
             >
-              <Text style={styles.secondaryButtonText}>
+              <Text
+                style={
+                  styles.secondaryButtonText
+                }
+              >
                 Choose From Library
               </Text>
             </Pressable>
           </>
         )}
 
-        {imageForProcessing && (
-          <WebView
-            style={{ width: 1, height: 1, opacity: 0 }}
-            originWhitelist={["*"]}
-            javaScriptEnabled
-            source={{
-              html: `
-                <!DOCTYPE html>
-                <html>
-                  <body>
-                    <script type="module">
-                      import { removeBackground } from "https://esm.sh/@imgly/background-removal";
+        {/* -------------------------------- */}
+        {/* PERSISTENT BACKGROUND WORKER     */}
+        {/* -------------------------------- */}
 
-                      const image = "${imageForProcessing}";
+        <WebView
+          ref={webViewRef}
+          style={
+            styles.backgroundWorker
+          }
+          originWhitelist={["*"]}
+          javaScriptEnabled
+          source={{
+            html: `
+              <!DOCTYPE html>
 
-                      async function processImage() {
+              <html>
+                <head>
+                  <meta
+                    name="viewport"
+                    content="width=device-width, initial-scale=1.0"
+                  />
+                </head>
+
+                <body>
+                  <script type="module">
+
+                    import {
+                      removeBackground
+                    } from "https://esm.sh/@imgly/background-removal";
+
+
+                    /*
+                     * This function stays alive
+                     * with the WebView.
+                     *
+                     * We do not create a brand-new
+                     * WebView for every clothing item.
+                     */
+
+                    window.processImage =
+                      async function(image) {
+
                         try {
-                          const response = await fetch(image);
-                          const blob = await response.blob();
+
+                          const response =
+                            await fetch(image);
+
+                          const blob =
+                            await response.blob();
+
 
                           const resultBlob =
-                            await removeBackground(blob);
+                            await removeBackground(
+                              blob
+                            );
 
-                          const reader = new FileReader();
 
-                          reader.onloadend = function () {
-                            window.ReactNativeWebView.postMessage(
+                          const reader =
+                            new FileReader();
+
+
+                          reader.onloadend =
+                            function() {
+
+                              window
+                                .ReactNativeWebView
+                                .postMessage(
+                                  JSON.stringify({
+                                    type:
+                                      "success",
+
+                                    image:
+                                      reader.result
+                                  })
+                                );
+                            };
+
+
+                          reader.readAsDataURL(
+                            resultBlob
+                          );
+
+                        } catch (error) {
+
+                          window
+                            .ReactNativeWebView
+                            .postMessage(
                               JSON.stringify({
-                                type: "success",
-                                image: reader.result
+                                type:
+                                  "error",
+
+                                message:
+                                  error.message
                               })
                             );
-                          };
-
-                          reader.readAsDataURL(resultBlob);
-                        } catch (error) {
-                          window.ReactNativeWebView.postMessage(
-                            JSON.stringify({
-                              type: "error",
-                              message: error.message
-                            })
-                          );
                         }
-                      }
+                      };
 
-                      processImage();
-                    </script>
-                  </body>
-                </html>
-              `,
-            }}
-            onMessage={(event) => {
-              const data = JSON.parse(
-                event.nativeEvent.data
-              );
 
-              if (data.type === "success") {
-                setSelectedImage(data.image);
-                setImageForProcessing(null);
-                setIsRemovingBackground(false);
+                    /*
+                     * Tell React Native that
+                     * the JS module is loaded.
+                     */
 
-                Alert.alert(
-                  "Background removed!",
-                  "Your clothing image now has a transparent background."
-                );
-              } else {
-                console.error(
-                  "WebView background removal error:",
-                  data.message
-                );
+                    window.ReactNativeWebView
+                      .postMessage(
+                        JSON.stringify({
+                          type: "ready"
+                        })
+                      );
 
-                setImageForProcessing(null);
-                setIsRemovingBackground(false);
-
-                Alert.alert(
-                  "Background removal failed",
-                  data.message ||
-                    "Something went wrong."
-                );
-              }
-            }}
-          />
-        )}
+                  </script>
+                </body>
+              </html>
+            `,
+          }}
+          onMessage={
+            handleWebViewMessage
+          }
+        />
       </ScrollView>
     </SafeScreen>
   );
 }
 
+/* -------------------------------- */
+/* STYLES                           */
+/* -------------------------------- */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor:
+      colors.background,
   },
 
   content: {
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 40,
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+
+  headerText: {
+    flex: 1,
+  },
+
+  backButton: {
+    width: 40,
+    height: 40,
+
+    justifyContent: "center",
+    alignItems: "center",
+
+    marginRight: 8,
+  },
+
+  backButtonText: {
+    fontSize: 32,
+    color: colors.text,
+    lineHeight: 34,
   },
 
   title: {
@@ -580,25 +1430,26 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-  fontSize: 15,
-  color: colors.secondaryText,
-},
+    fontSize: 15,
+    color: colors.secondaryText,
+  },
 
   emptyPreview: {
     height: 320,
+
     borderRadius: 24,
-    backgroundColor: colors.surface,
+
+    backgroundColor:
+      colors.surface,
+
     borderWidth: 1,
     borderColor: colors.border,
+
     justifyContent: "center",
     alignItems: "center",
+
     paddingHorizontal: 30,
     marginBottom: 24,
-  },
-
-  emptyPreviewIcon: {
-    fontSize: 56,
-    marginBottom: 12,
   },
 
   emptyPreviewText: {
@@ -609,11 +1460,17 @@ const styles = StyleSheet.create({
 
   previewContainer: {
     height: 360,
+
     borderRadius: 24,
-    backgroundColor: colors.surface,
+
+    backgroundColor:
+      colors.surface,
+
     borderWidth: 1,
     borderColor: colors.border,
+
     overflow: "hidden",
+
     marginBottom: 12,
   },
 
@@ -622,39 +1479,94 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 
-  previewLabel: {
-    textAlign: "center",
+  statusContainer: {
+    alignItems: "center",
+
+    paddingVertical: 10,
+
+    marginBottom: 10,
+  },
+
+  processingText: {
+    color: colors.accent,
+
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  statusSubtext: {
+    marginTop: 4,
+
     color: colors.secondaryText,
-    marginBottom: 20,
+
+    fontSize: 12,
+  },
+
+  readyText: {
+    color: colors.text,
+
+    fontSize: 14,
+    fontWeight: "700",
   },
 
   primaryButton: {
-    backgroundColor: colors.accent,
+    backgroundColor:
+      colors.accent,
+
     paddingVertical: 17,
+
     borderRadius: 20,
+
     alignItems: "center",
+
     marginBottom: 12,
   },
 
   primaryButtonText: {
     color: "#FFFFFF",
+
     fontSize: 16,
     fontWeight: "700",
   },
 
   secondaryButton: {
-    backgroundColor: colors.surface,
+    backgroundColor:
+      colors.surface,
+
     borderWidth: 1,
     borderColor: colors.border,
+
     paddingVertical: 17,
+
     borderRadius: 20,
+
     alignItems: "center",
   },
 
   secondaryButtonText: {
     color: colors.text,
+
     fontSize: 16,
     fontWeight: "600",
+  },
+
+  retryButton: {
+    borderWidth: 1,
+    borderColor: "#D94A4A",
+
+    paddingVertical: 14,
+
+    borderRadius: 18,
+
+    alignItems: "center",
+
+    marginBottom: 12,
+  },
+
+  retryButtonText: {
+    color: "#D94A4A",
+
+    fontWeight: "700",
   },
 
   formSection: {
@@ -664,83 +1576,104 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 14,
     fontWeight: "700",
+
     color: colors.text,
+
     marginBottom: 10,
     marginTop: 18,
   },
 
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor:
+      colors.surface,
+
     borderWidth: 1,
     borderColor: colors.border,
+
     borderRadius: 16,
+
     paddingHorizontal: 16,
     paddingVertical: 14,
+
     fontSize: 15,
+
     color: colors.text,
+  },
+
+  customInput: {
+    marginTop: 12,
   },
 
   optionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
+
     gap: 10,
   },
 
   optionButton: {
-    backgroundColor: colors.surface,
+    backgroundColor:
+      colors.surface,
+
     borderWidth: 1,
     borderColor: colors.border,
+
     paddingHorizontal: 14,
     paddingVertical: 10,
+
     borderRadius: 18,
   },
 
   optionButtonSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor:
+      colors.accent,
+
+    borderColor:
+      colors.accent,
   },
 
   optionText: {
     color: colors.text,
+
     fontWeight: "500",
   },
 
   optionTextSelected: {
     color: "#FFFFFF",
   },
-  
 
   saveButton: {
-    backgroundColor: colors.accent,
+    backgroundColor:
+      colors.accent,
+
     paddingVertical: 17,
+
     borderRadius: 20,
+
     alignItems: "center",
+
     marginTop: 30,
+  },
+
+  saveButtonDisabled: {
+    opacity: 0.5,
   },
 
   saveButtonText: {
     color: "#FFFFFF",
+
     fontSize: 16,
     fontWeight: "700",
   },
-  header: {
-  flexDirection: "row",
-  alignItems: "flex-start",
-  marginBottom: 24,
-},
 
-backButton: {
-  width: 40,
-  height: 40,
-  justifyContent: "center",
-  alignItems: "center",
-  marginRight: 8,
-},
+  /*
+   * The WebView still exists,
+   * but it is essentially invisible.
+   */
 
-backButtonText: {
-  fontSize: 32,
-  color: colors.text,
-  lineHeight: 34,
-},
-  
+  backgroundWorker: {
+    width: 1,
+    height: 1,
+    opacity: 0.01,
+  },
 });

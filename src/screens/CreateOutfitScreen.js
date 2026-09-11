@@ -1,4 +1,9 @@
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   View,
   Text,
@@ -10,6 +15,7 @@ import {
 import { useCloset } from "../context/ClosetContext";
 import { colors } from "../constants/colors";
 import SafeScreen from "../components/SafeScreen";
+import { useWeather, } from"../context/WeatherContext";
 
 const DEFAULT_OCCASIONS = [
   "Casual",
@@ -19,211 +25,639 @@ const DEFAULT_OCCASIONS = [
   "Date Night",
 ];
 
-export default function CreateOutfitScreen() {
+/*
+ * TEMPORARY WEATHER DATA
+ *
+ * Later, these values will come from
+ * our shared WeatherContext.
+ */
+
+function getWeatherRecommendations(weather) {
+  const recommendations = [];
+
+  /* RAIN */
+
+  if (weather.rainExpected) {
+    recommendations.push({
+      id: "rain",
+
+      icon: "☔",
+
+      title: "Rain expected",
+
+      message:
+        `${weather.rainChance}% chance of rain today. ` +
+        "Consider bringing an umbrella and wearing a raincoat or rain boots.",
+    });
+  }
+
+  /* COLD */
+
+  if (
+    weather.temperature <= 50 ||
+    weather.weatherCategory === "Cold"
+  ) {
+    recommendations.push({
+      id: "cold",
+
+      icon: "🧥",
+
+      title: "Bundle up",
+
+      message:
+        "It's cold outside. A coat, sweater, or warm layer would be a good addition.",
+    });
+  }
+
+  /* HOT */
+
+  if (
+    weather.temperature >= 85 ||
+    weather.weatherCategory === "Hot"
+  ) {
+    recommendations.push({
+      id: "hot",
+
+      icon: "☀️",
+
+      title: "Dress light",
+
+      message:
+        "It's going to be hot. Lightweight and breathable clothing may keep you more comfortable.",
+    });
+  }
+
+  /* HIGH UV */
+
+  if (weather.uvIndex >= 6) {
+    recommendations.push({
+      id: "uv",
+
+      icon: "🕶️",
+
+      title: "High UV",
+
+      message:
+        `UV index is ${weather.uvIndex}. Consider sunglasses, a hat, and sun protection.`,
+    });
+  }
+
+  /* WIND */
+
+  if (weather.windSpeed >= 15) {
+    recommendations.push({
+      id: "wind",
+
+      icon: "💨",
+
+      title: "It's windy",
+
+      message:
+        `Winds may reach around ${weather.windSpeed} mph. A light jacket or secure outer layer could help.`,
+    });
+  }
+
+  /* TEMPERATURE DROP */
+
+  if (
+    weather.temperature -
+      weather.eveningTemperature >=
+    10
+  ) {
+    recommendations.push({
+      id: "temperature-drop",
+
+      icon: "🌙",
+
+      title: "It gets cooler later",
+
+      message:
+        `Temperatures may fall to around ${weather.eveningTemperature}°F this evening. Consider bringing an extra layer.`,
+    });
+  }
+
+  return recommendations;
+}
+
+export default function CreateOutfitScreen({
+  navigation,
+}) {
   const { clothingItems } = useCloset();
+  const { 
+    currentWeather,
+    weatherLoading,
+    weatherError,
+  } = useWeather();
 
-  const [selectedOccasion, setSelectedOccasion] =
-    useState("");
+  const weatherRecommendations = 
+  currentWeather
+    ? getWeatherRecommendations(
+      currentWeather
+    )
+    : [];
 
-  const [startingPieces, setStartingPieces] =
-    useState(null);
+  const [
+    selectedOccasions,
+    setSelectedOccasions,
+  ] = useState([]);
+
+  const [
+    selectedWeather,
+    setSelectedWeather,
+  ] = useState(null);
+
+  useEffect(() => {
+  if (
+    currentWeather &&
+    !selectedWeather
+  ) {
+    setSelectedWeather(
+      currentWeather.weatherCategory
+    );
+  }
+}, [
+  currentWeather,
+  selectedWeather,
+]);
+
+  /* -------------------------------- */
+  /* OCCASION OPTIONS                 */
+  /* -------------------------------- */
 
   const occasionOptions = useMemo(() => {
-    const customOccasions = clothingItems
-      .flatMap((item) => item.occasions || [])
-      .filter(
-        (occasion) =>
-          !DEFAULT_OCCASIONS.includes(occasion)
+    const closetOccasions =
+      clothingItems.flatMap(
+        (item) =>
+          item.occasions || []
       );
 
     return [
-      ...DEFAULT_OCCASIONS,
-      ...new Set(customOccasions),
-      "Other",
+      ...new Set([
+        ...DEFAULT_OCCASIONS,
+        ...closetOccasions,
+      ]),
     ];
   }, [clothingItems]);
+
+  /* -------------------------------- */
+  /* SELECT / UNSELECT OCCASION       */
+  /* -------------------------------- */
+
+  const toggleOccasion = (
+    occasion
+  ) => {
+    setSelectedOccasions(
+      (currentOccasions) =>
+        currentOccasions.includes(
+          occasion
+        )
+          ? currentOccasions.filter(
+              (item) =>
+                item !== occasion
+            )
+          : [
+              ...currentOccasions,
+              occasion,
+            ]
+    );
+  };
+
+  /* -------------------------------- */
+  /* OPEN CANVAS                      */
+  /* -------------------------------- */
+
+  const buildOutfit = () => {
+    navigation.navigate(
+      "OutfitBuilder",
+      {
+        selectedOccasions,
+        selectedWeather,
+      }
+    );
+  };
 
   return (
     <SafeScreen>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
       >
+        {/* HEADER */}
+
         <Text style={styles.title}>
-          Create Outfit
+          Create an Outfit
         </Text>
 
         <Text style={styles.subtitle}>
-          Tell us a little about your day and we'll
-          narrow down your closet.
+          Build a look that works for
+          your plans and today's weather.
         </Text>
+{/* WEATHER CARD */}
 
-        {/* WEATHER */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Today's Weather
+<View style={styles.weatherCard}>
+  {/* LOADING */}
+
+  {weatherLoading ? (
+    <Text style={styles.temperature}>
+      Loading weather...
+    </Text>
+
+  ) : weatherError ? (
+
+    /* ERROR */
+
+    <Text style={styles.weatherCondition}>
+      {weatherError}
+    </Text>
+
+  ) : currentWeather ? (
+
+    /* REAL WEATHER */
+
+    <>
+      <View style={styles.weatherTopRow}>
+        <View>
+          <Text style={styles.weatherLabel}>
+            TODAY'S WEATHER
           </Text>
 
-          <View style={styles.weatherCard}>
-            <Text style={styles.weatherTemperature}>
-              80°F
-            </Text>
+          <Text style={styles.temperature}>
+            {currentWeather.temperature}°F
+          </Text>
+        </View>
 
-            <Text style={styles.weatherSummary}>
-              Sunny and warm
-            </Text>
+        <View
+          style={
+            styles.weatherCategoryBadge
+          }
+        >
+          <Text
+            style={
+              styles.weatherCategoryText
+            }
+          >
+            {currentWeather.weatherCategory}
+          </Text>
+        </View>
+      </View>
 
-            <Text style={styles.weatherNote}>
-              Weather will be connected automatically
-              soon.
-            </Text>
+      <Text
+        style={styles.weatherCondition}
+      >
+        {currentWeather.condition}
+        {" • Feels like "}
+        {currentWeather.feelsLike}°F
+      </Text>
+
+      {/* WEATHER ALERTS */}
+
+      {weatherRecommendations.length >
+        0 && (
+        <View
+          style={
+            styles.weatherAlertsContainer
+          }
+        >
+          {weatherRecommendations
+            .slice(0, 2)
+            .map(
+              (recommendation) => (
+                <View
+                  key={
+                    recommendation.id
+                  }
+                  style={
+                    styles.rainAlert
+                  }
+                >
+                  <Text
+                    style={
+                      styles.rainAlertIcon
+                    }
+                  >
+                    {
+                      recommendation.icon
+                    }
+                  </Text>
+
+                  <View
+                    style={
+                      styles.rainAlertTextContainer
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.rainAlertTitle
+                      }
+                    >
+                      {
+                        recommendation.title
+                      }
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.rainAlertText
+                      }
+                    >
+                      {
+                        recommendation.message
+                      }
+                    </Text>
+                  </View>
+                </View>
+              )
+            )}
+        </View>
+      )}
+    </>
+
+  ) : null}
+</View>
+
+        {/* WEATHER QUESTION */}
+
+        <View style={styles.section}>
+          <Text
+            style={
+              styles.questionNumber
+            }
+          >
+            Weather
+          </Text>
+
+          <Text
+            style={
+              styles.questionTitle
+            }
+          >
+            What weather are you
+            dressing for?
+          </Text>
+
+          <Text
+            style={
+              styles.questionDescription
+            }
+          >
+            We've selected today's
+            weather automatically, but
+            you can change it if you're
+            planning ahead.
+          </Text>
+
+          <View
+            style={
+              styles.optionContainer
+            }
+          >
+            {[
+              "Hot",
+              "Warm",
+              "Cool",
+              "Cold",
+            ].map(
+              (weatherOption) => {
+                const selected =
+                  selectedWeather ===
+                  weatherOption;
+
+                return (
+                  <Pressable
+                    key={weatherOption}
+                    style={[
+                      styles.optionButton,
+
+                      selected &&
+                        styles.optionButtonSelected,
+                    ]}
+                    onPress={() =>
+                      setSelectedWeather(
+                        weatherOption
+                      )
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+
+                        selected &&
+                          styles.optionTextSelected,
+                      ]}
+                    >
+                      {weatherOption}
+                    </Text>
+                  </Pressable>
+                );
+              }
+            )}
           </View>
         </View>
 
-        {/* OCCASION */}
+        {/* OCCASION QUESTION */}
+
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={
+              styles.questionNumber
+            }
+          >
+            Occasion
+          </Text>
+
+          <Text
+            style={
+              styles.questionTitle
+            }
+          >
             What are you dressing for?
           </Text>
 
-          <Text style={styles.sectionSubtitle}>
-            What's the occasion?
+          <Text
+            style={
+              styles.questionDescription
+            }
+          >
+            Choose one or more occasions.
+            We'll use them to help filter
+            your closet while you build
+            your outfit.
           </Text>
 
-          <View style={styles.optionRow}>
-            {occasionOptions.map((occasion) => {
-              const selected =
-                selectedOccasion === occasion;
+          <View
+            style={
+              styles.optionContainer
+            }
+          >
+            {occasionOptions.map(
+              (occasion) => {
+                const selected =
+                  selectedOccasions.includes(
+                    occasion
+                  );
 
-              return (
-                <Pressable
-                  key={occasion}
-                  style={[
-                    styles.optionButton,
-                    selected &&
-                      styles.optionButtonSelected,
-                  ]}
-                  onPress={() =>
-                    setSelectedOccasion(occasion)
-                  }
-                >
-                  <Text
+                return (
+                  <Pressable
+                    key={occasion}
                     style={[
-                      styles.optionText,
+                      styles.optionButton,
+
                       selected &&
-                        styles.optionTextSelected,
+                        styles.optionButtonSelected,
                     ]}
+                    onPress={() =>
+                      toggleOccasion(
+                        occasion
+                      )
+                    }
                   >
-                    {occasion}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Text
+                      style={[
+                        styles.optionText,
+
+                        selected &&
+                          styles.optionTextSelected,
+                      ]}
+                    >
+                      {occasion}
+                    </Text>
+                  </Pressable>
+                );
+              }
+            )}
           </View>
         </View>
 
-        {/* STARTING PIECES */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            How many pieces do you want to start with?
-          </Text>
+        {/* SELECTION SUMMARY */}
 
-          <Text style={styles.sectionSubtitle}>
-            You can always add or remove pieces later.
-          </Text>
+        {selectedOccasions.length >
+          0 && (
+          <View
+            style={
+              styles.selectionSummary
+            }
+          >
+            <Text
+              style={
+                styles.selectionLabel
+              }
+            >
+              Building for
+            </Text>
 
-          <View style={styles.pieceRow}>
-            {[2, 3, 4].map((number) => {
-              const selected =
-                startingPieces === number;
-
-              return (
-                <Pressable
-                  key={number}
-                  style={[
-                    styles.pieceButton,
-                    selected &&
-                      styles.pieceButtonSelected,
-                  ]}
-                  onPress={() =>
-                    setStartingPieces(number)
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.pieceNumber,
-                      selected &&
-                        styles.pieceTextSelected,
-                    ]}
-                  >
-                    {number}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.pieceLabel,
-                      selected &&
-                        styles.pieceTextSelected,
-                    ]}
-                  >
-                    {number === 2
-                      ? "Dress"
-                      : number === 3
-                      ? "Classic"
-                      : "Layered"}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            <Text
+              style={
+                styles.selectionText
+              }
+            >
+              {selectedWeather}
+              {" • "}
+              {selectedOccasions.join(
+                " • "
+              )}
+            </Text>
           </View>
+        )}
 
-          {startingPieces === 2 && (
-            <View style={styles.infoCard}>
-              <Text style={styles.infoText}>
-                Your outfit will start with a Dress
-                and Shoes.
-              </Text>
-            </View>
-          )}
+        {/* WEATHER REMINDER */}
 
-          {startingPieces === 3 && (
-            <View style={styles.infoCard}>
-              <Text style={styles.infoText}>
-                Your outfit will start with a Top,
-                Bottom, and Shoes.
-              </Text>
-            </View>
-          )}
+       {weatherRecommendations.length >
+  0 && (
+  <View
+    style={
+      styles.reminderCard
+    }
+  >
+    <Text
+      style={
+        styles.reminderTitle
+      }
+    >
+      Before you head out
+    </Text>
 
-          {startingPieces === 4 && (
-            <View style={styles.infoCard}>
-              <Text style={styles.infoText}>
-                Your outfit will start with a Top,
-                Bottom, Shoes, and one extra piece.
-              </Text>
-            </View>
-          )}
+    <Text
+      style={
+        styles.reminderSubtitle
+      }
+    >
+      A few things to keep in mind
+      for today's weather:
+    </Text>
+
+    {weatherRecommendations.map(
+      (recommendation) => (
+        <View
+          key={recommendation.id}
+          style={
+            styles.reminderItem
+          }
+        >
+          <Text
+            style={
+              styles.reminderIcon
+            }
+          >
+            {recommendation.icon}
+          </Text>
+
+          <View
+            style={
+              styles.reminderItemText
+            }
+          >
+            <Text
+              style={
+                styles.reminderItemTitle
+              }
+            >
+              {
+                recommendation.title
+              }
+            </Text>
+
+            <Text
+              style={
+                styles.reminderText
+              }
+            >
+              {
+                recommendation.message
+              }
+            </Text>
+          </View>
         </View>
+      )
+    )}
+  </View>
+)}
+
+        {/* BUILD BUTTON */}
 
         <Pressable
           style={[
             styles.buildButton,
-            (!selectedOccasion ||
-              !startingPieces) &&
+
+            selectedOccasions.length ===
+              0 &&
               styles.buildButtonDisabled,
           ]}
           disabled={
-            !selectedOccasion || !startingPieces
+            selectedOccasions.length ===
+            0
           }
-          onPress={() => {
-            console.log({
-              selectedOccasion,
-              startingPieces,
-            });
-          }}
+          onPress={buildOutfit}
         >
-          <Text style={styles.buildButtonText}>
+          <Text
+            style={
+              styles.buildButtonText
+            }
+          >
             Build My Outfit
           </Text>
         </Pressable>
@@ -232,162 +666,380 @@ export default function CreateOutfitScreen() {
   );
 }
 
+/* -------------------------------- */
+/* STYLES                           */
+/* -------------------------------- */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor:
+      colors.background,
   },
 
   content: {
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingTop: 28,
+    paddingBottom: 50,
   },
 
   title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 8,
-  },
-
-  subtitle: {
-    fontSize: 15,
-    color: colors.secondaryText,
-    lineHeight: 21,
-    marginBottom: 28,
-  },
-
-  section: {
-    marginBottom: 30,
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 6,
-  },
-
-  sectionSubtitle: {
-    fontSize: 14,
-    color: colors.secondaryText,
-    marginBottom: 14,
-  },
-
-  weatherCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 22,
-    padding: 20,
-    marginTop: 10,
-  },
-
-  weatherTemperature: {
     fontSize: 30,
     fontWeight: "700",
     color: colors.text,
   },
 
-  weatherSummary: {
-    fontSize: 16,
+  subtitle: {
+    fontSize: 15,
+
+    color:
+      colors.secondaryText,
+
+    marginTop: 6,
+
+    lineHeight: 21,
+  },
+  weatherAlertsContainer: {
+  marginTop: 18,
+  gap: 10,
+},
+
+reminderSubtitle: {
+  fontSize: 13,
+
+  lineHeight: 19,
+
+  color:
+    colors.secondaryText,
+
+  marginTop: 5,
+
+  marginBottom: 6,
+},
+
+reminderItem: {
+  flexDirection: "row",
+
+  alignItems: "flex-start",
+
+  marginTop: 14,
+},
+
+reminderIcon: {
+  fontSize: 22,
+
+  marginRight: 12,
+},
+
+reminderItemText: {
+  flex: 1,
+},
+
+reminderItemTitle: {
+  fontSize: 14,
+
+  fontWeight: "700",
+
+  color: colors.text,
+
+  marginBottom: 3,
+},
+
+  /* WEATHER */
+
+  weatherCard: {
+    marginTop: 26,
+
+    backgroundColor:
+      colors.surface,
+
+    borderWidth: 1,
+    borderColor:
+      colors.border,
+
+    borderRadius: 26,
+
+    padding: 20,
+  },
+
+  weatherTopRow: {
+    flexDirection: "row",
+
+    alignItems: "flex-start",
+
+    justifyContent:
+      "space-between",
+  },
+
+  weatherLabel: {
+    fontSize: 12,
+
+    fontWeight: "700",
+
+    color:
+      colors.secondaryText,
+
+    letterSpacing: 0.8,
+  },
+
+  temperature: {
+    fontSize: 38,
+
+    fontWeight: "700",
+
     color: colors.text,
+
     marginTop: 4,
   },
 
-  weatherNote: {
-    fontSize: 12,
-    color: colors.secondaryText,
-    marginTop: 10,
+  weatherCategoryBadge: {
+    backgroundColor:
+      colors.background,
+
+    borderWidth: 1,
+
+    borderColor:
+      colors.border,
+
+    borderRadius: 18,
+
+    paddingHorizontal: 14,
+
+    paddingVertical: 8,
   },
 
-  optionRow: {
+  weatherCategoryText: {
+    fontSize: 13,
+
+    fontWeight: "700",
+
+    color: colors.text,
+  },
+
+  weatherCondition: {
+    marginTop: 4,
+
+    fontSize: 15,
+
+    color:
+      colors.secondaryText,
+  },
+
+  rainAlert: {
     flexDirection: "row",
+
+    marginTop: 18,
+
+    padding: 14,
+
+    borderRadius: 18,
+
+    backgroundColor:
+      colors.background,
+  },
+
+  rainAlertIcon: {
+    fontSize: 24,
+
+    marginRight: 12,
+  },
+
+  rainAlertTextContainer: {
+    flex: 1,
+  },
+
+  rainAlertTitle: {
+    fontSize: 14,
+
+    fontWeight: "700",
+
+    color: colors.text,
+  },
+
+  rainAlertText: {
+    fontSize: 13,
+
+    lineHeight: 18,
+
+    color:
+      colors.secondaryText,
+
+    marginTop: 3,
+  },
+
+  /* QUESTIONS */
+
+  section: {
+    marginTop: 24,
+
+    backgroundColor:
+      colors.surface,
+
+    borderWidth: 1,
+
+    borderColor:
+      colors.border,
+
+    borderRadius: 26,
+
+    padding: 20,
+  },
+
+  questionNumber: {
+    fontSize: 12,
+
+    fontWeight: "700",
+
+    color: colors.accent,
+
+    textTransform:
+      "uppercase",
+
+    letterSpacing: 0.8,
+
+    marginBottom: 7,
+  },
+
+  questionTitle: {
+    fontSize: 22,
+
+    fontWeight: "700",
+
+    color: colors.text,
+  },
+
+  questionDescription: {
+    fontSize: 14,
+
+    lineHeight: 20,
+
+    color:
+      colors.secondaryText,
+
+    marginTop: 7,
+  },
+
+  optionContainer: {
+    flexDirection: "row",
+
     flexWrap: "wrap",
+
     gap: 10,
+
+    marginTop: 22,
   },
 
   optionButton: {
-    backgroundColor: colors.surface,
+    backgroundColor:
+      colors.background,
+
     borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 15,
-    paddingVertical: 11,
+
+    borderColor:
+      colors.border,
+
     borderRadius: 20,
+
+    paddingHorizontal: 16,
+
+    paddingVertical: 12,
   },
 
   optionButtonSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor:
+      colors.accent,
+
+    borderColor:
+      colors.accent,
   },
 
   optionText: {
     color: colors.text,
-    fontWeight: "500",
+
+    fontSize: 14,
+
+    fontWeight: "600",
   },
 
   optionTextSelected: {
     color: "#FFFFFF",
   },
 
-  pieceRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 8,
+  /* SUMMARY */
+
+  selectionSummary: {
+    marginTop: 20,
+
+    paddingHorizontal: 4,
   },
 
-  pieceButton: {
-    flex: 1,
-    backgroundColor: colors.surface,
+  selectionLabel: {
+    color:
+      colors.secondaryText,
+
+    fontSize: 12,
+
+    marginBottom: 5,
+  },
+
+  selectionText: {
+    color: colors.text,
+
+    fontSize: 14,
+
+    fontWeight: "600",
+  },
+
+  /* REMINDER */
+
+  reminderCard: {
+    marginTop: 20,
+
+    backgroundColor:
+      colors.surface,
+
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: "center",
+
+    borderColor:
+      colors.border,
+
+    borderRadius: 22,
+
+    padding: 18,
   },
 
-  pieceButtonSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
+  reminderTitle: {
+    fontSize: 16,
 
-  pieceNumber: {
-    fontSize: 24,
     fontWeight: "700",
+
     color: colors.text,
   },
 
-  pieceLabel: {
-    fontSize: 12,
-    marginTop: 4,
-    color: colors.secondaryText,
+  reminderText: {
+    fontSize: 14,
+
+    lineHeight: 20,
+
+    color:
+      colors.secondaryText,
+
+    marginTop: 7,
   },
 
-  pieceTextSelected: {
-    color: "#FFFFFF",
-  },
-
-  infoCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-
-  infoText: {
-    color: colors.secondaryText,
-    fontSize: 13,
-    textAlign: "center",
-  },
+  /* BUTTON */
 
   buildButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 20,
+    backgroundColor:
+      colors.accent,
+
+    borderRadius: 22,
+
     paddingVertical: 17,
+
     alignItems: "center",
+
+    marginTop: 28,
   },
 
   buildButtonDisabled: {
@@ -396,7 +1048,9 @@ const styles = StyleSheet.create({
 
   buildButtonText: {
     color: "#FFFFFF",
+
     fontSize: 16,
+
     fontWeight: "700",
   },
 });
