@@ -7,24 +7,44 @@ import {
 
 import * as FileSystem from "expo-file-system/legacy";
 
-import { sampleClothing } from "../data/sampleClothing";
-
 const ClosetContext = createContext();
 
 const CLOSET_DATA_FILE =
   `${FileSystem.documentDirectory}closet-data.json`;
 
+const OUTFIT_DATA_FILE =
+  `${FileSystem.documentDirectory}outfit-data.json`;
+
 export function ClosetProvider({
   children,
 }) {
-  const [clothingItems, setClothingItems] =
-    useState([]);
+  const [
+    clothingItems,
+    setClothingItems,
+  ] = useState([]);
 
-  const [isClosetLoaded, setIsClosetLoaded] =
-    useState(false);
+  const [
+    isClosetLoaded,
+    setIsClosetLoaded,
+  ] = useState(false);
+
+  const [
+    savedOutfits,
+    setSavedOutfits,
+  ] = useState([]);
+
+  const [
+    currentOutfit,
+    setCurrentOutfit,
+  ] = useState(null);
+
+  const [
+    isOutfitDataLoaded,
+    setIsOutfitDataLoaded,
+  ] = useState(false);
 
   /* -------------------------------- */
-  /* LOAD CLOSET WHEN APP STARTS      */
+  /* LOAD CLOSET                      */
   /* -------------------------------- */
 
   useEffect(() => {
@@ -35,10 +55,6 @@ export function ClosetProvider({
             CLOSET_DATA_FILE
           );
 
-        /*
-         * If we have saved closet data,
-         * restore it.
-         */
         if (fileInfo.exists) {
           const savedData =
             await FileSystem.readAsStringAsync(
@@ -46,39 +62,45 @@ export function ClosetProvider({
             );
 
           const parsedItems =
-            JSON.parse(savedData);
+  JSON.parse(savedData);
 
-          setClothingItems(parsedItems);
+/*
+ * Remove the original placeholder/sample
+ * clothes that do not have real images.
+ */
+const realClothingItems =
+  parsedItems.filter(
+    (item) =>
+      item.processedImageUri ||
+      item.imageUri
+  );
+
+setClothingItems(
+  realClothingItems
+);
+
+console.log(
+  `Loaded ${realClothingItems.length} real closet items`
+);
 
           console.log(
             `Loaded ${parsedItems.length} closet items`
           );
-        } else {
-          /*
-           * First time opening the app:
-           * start with sample clothing.
-           */
-          setClothingItems(
-            sampleClothing
-          );
 
-          console.log(
-            "No saved closet found. Using sample clothing."
-          );
-        }
+        } else {
+  setClothingItems([]);
+
+  console.log(
+    "No saved closet found. Starting with an empty closet."
+  );
+}
       } catch (error) {
         console.error(
           "Error loading closet:",
           error
         );
 
-        /*
-         * Fall back to sample data
-         * instead of crashing.
-         */
-        setClothingItems(
-          sampleClothing
-        );
+        setClothingItems([]);
       } finally {
         setIsClosetLoaded(true);
       }
@@ -88,43 +110,95 @@ export function ClosetProvider({
   }, []);
 
   /* -------------------------------- */
-  /* SAVE WHEN CLOSET CHANGES         */
+  /* LOAD OUTFITS                     */
   /* -------------------------------- */
 
   useEffect(() => {
-    /*
-     * Do not save until the original
-     * closet has finished loading.
-     *
-     * Otherwise [] could overwrite our
-     * saved closet on startup.
-     */
+    const loadOutfits = async () => {
+      try {
+        const fileInfo =
+          await FileSystem.getInfoAsync(
+            OUTFIT_DATA_FILE
+          );
+
+        if (!fileInfo.exists) {
+          console.log(
+            "No saved outfits found."
+          );
+
+          return;
+        }
+
+        const savedData =
+          await FileSystem.readAsStringAsync(
+            OUTFIT_DATA_FILE
+          );
+
+        const parsedData =
+          JSON.parse(savedData);
+
+        setSavedOutfits(
+          parsedData.savedOutfits || []
+        );
+
+        setCurrentOutfit(
+          parsedData.currentOutfit ||
+            null
+        );
+
+        console.log(
+          `Loaded ${
+            parsedData.savedOutfits
+              ?.length || 0
+          } saved outfits`
+        );
+      } catch (error) {
+        console.error(
+          "Error loading outfits:",
+          error
+        );
+      } finally {
+        setIsOutfitDataLoaded(
+          true
+        );
+      }
+    };
+
+    loadOutfits();
+  }, []);
+
+  /* -------------------------------- */
+  /* SAVE CLOSET                      */
+  /* -------------------------------- */
+
+  useEffect(() => {
     if (!isClosetLoaded) {
       return;
     }
 
-    const saveCloset = async () => {
-      try {
-        const jsonData =
-          JSON.stringify(
-            clothingItems
+    const saveCloset =
+      async () => {
+        try {
+          const jsonData =
+            JSON.stringify(
+              clothingItems
+            );
+
+          await FileSystem.writeAsStringAsync(
+            CLOSET_DATA_FILE,
+            jsonData
           );
 
-        await FileSystem.writeAsStringAsync(
-          CLOSET_DATA_FILE,
-          jsonData
-        );
-
-        console.log(
-          `Saved ${clothingItems.length} closet items`
-        );
-      } catch (error) {
-        console.error(
-          "Error saving closet:",
-          error
-        );
-      }
-    };
+          console.log(
+            `Saved ${clothingItems.length} closet items`
+          );
+        } catch (error) {
+          console.error(
+            "Error saving closet:",
+            error
+          );
+        }
+      };
 
     saveCloset();
   }, [
@@ -133,10 +207,53 @@ export function ClosetProvider({
   ]);
 
   /* -------------------------------- */
+  /* SAVE OUTFITS                     */
+  /* -------------------------------- */
+
+  useEffect(() => {
+    if (!isOutfitDataLoaded) {
+      return;
+    }
+
+    const saveOutfitData =
+      async () => {
+        try {
+          const jsonData =
+            JSON.stringify({
+              savedOutfits,
+              currentOutfit,
+            });
+
+          await FileSystem.writeAsStringAsync(
+            OUTFIT_DATA_FILE,
+            jsonData
+          );
+
+          console.log(
+            `Saved ${savedOutfits.length} outfits`
+          );
+        } catch (error) {
+          console.error(
+            "Error saving outfits:",
+            error
+          );
+        }
+      };
+
+    saveOutfitData();
+  }, [
+    savedOutfits,
+    currentOutfit,
+    isOutfitDataLoaded,
+  ]);
+
+  /* -------------------------------- */
   /* ADD CLOTHING ITEM                */
   /* -------------------------------- */
 
-  const addClothingItem = (item) => {
+  const addClothingItem = (
+    item
+  ) => {
     setClothingItems(
       (currentItems) => [
         ...currentItems,
@@ -154,6 +271,69 @@ export function ClosetProvider({
   };
 
   /* -------------------------------- */
+  /* SAVE / UPDATE OUTFIT             */
+  /* -------------------------------- */
+
+  const saveOutfit = (
+    outfit
+  ) => {
+    const now = Date.now();
+
+    const outfitId =
+      outfit.id ||
+      `outfit-${now}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+
+    const savedOutfit = {
+      ...outfit,
+
+      id: outfitId,
+
+      createdAt:
+        outfit.createdAt || now,
+
+      updatedAt: now,
+    };
+
+    setSavedOutfits(
+      (currentOutfits) => {
+        const alreadyExists =
+          currentOutfits.some(
+            (existingOutfit) =>
+              existingOutfit.id ===
+              outfitId
+          );
+
+        if (alreadyExists) {
+          return currentOutfits.map(
+            (existingOutfit) =>
+              existingOutfit.id ===
+              outfitId
+                ? savedOutfit
+                : existingOutfit
+          );
+        }
+
+        return [
+          ...currentOutfits,
+          savedOutfit,
+        ];
+      }
+    );
+
+    /*
+     * The most recently saved outfit
+     * becomes the outfit shown on Home.
+     */
+    setCurrentOutfit(
+      savedOutfit
+    );
+
+    return savedOutfit;
+  };
+
+  /* -------------------------------- */
   /* CONTEXT                          */
   /* -------------------------------- */
 
@@ -163,6 +343,11 @@ export function ClosetProvider({
         clothingItems,
         addClothingItem,
         isClosetLoaded,
+
+        savedOutfits,
+        currentOutfit,
+        saveOutfit,
+        isOutfitDataLoaded,
       }}
     >
       {children}

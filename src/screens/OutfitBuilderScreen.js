@@ -1,9 +1,11 @@
 import {
+  useEffect,
   useRef,
   useState,
 } from "react";
 
 import {
+  Alert,
   Animated,
   Image,
   PanResponder,
@@ -16,6 +18,10 @@ import {
 
 import { useCloset } from "../context/ClosetContext";
 import { colors } from "../constants/colors";
+import { captureRef } from "react-native-view-shot";
+
+import * as FileSystem from "expo-file-system/legacy";
+
 import {
   CLOTHING_CATEGORIES,
   CANVAS_DEFAULTS,
@@ -26,13 +32,40 @@ import SafeScreen from "../components/SafeScreen";
 const CANVAS_ITEM_WIDTH = 120;
 const CANVAS_ITEM_HEIGHT = 145;
 
+const MIN_ITEM_SCALE = 0.4;
+const MAX_ITEM_SCALE = 2.5;
+
 /* -------------------------------- */
 /* DRAGGABLE ITEM                    */
 /* -------------------------------- */
 
+function getTouchDistance(touches) {
+  if (touches.length < 2) {
+    return 0;
+  }
+
+  const firstTouch = touches[0];
+  const secondTouch = touches[1];
+
+  const deltaX =
+    secondTouch.pageX -
+    firstTouch.pageX;
+
+  const deltaY =
+    secondTouch.pageY -
+    firstTouch.pageY;
+
+  return Math.sqrt(
+    deltaX * deltaX +
+    deltaY * deltaY
+  );
+}
+
 function DraggableCanvasItem({
   canvasItem,
   onRemove,
+  onUpdate,
+  hideControls,
 }) {
   const pan = useRef(
     new Animated.ValueXY({
@@ -41,40 +74,200 @@ function DraggableCanvasItem({
     })
   ).current;
 
+  const scale = useRef(
+    new Animated.Value(
+      canvasItem.scale ?? 1
+    )
+  ).current;
+
+  const inverseScale =
+  Animated.divide(1, scale);
+
+  const currentPosition =
+    useRef({
+      x: canvasItem.x,
+      y: canvasItem.y,
+    });
+
+  const currentScale =
+    useRef(
+      canvasItem.scale ?? 1
+    );
+
+  const dragStartPosition =
+    useRef({
+      x: canvasItem.x,
+      y: canvasItem.y,
+    });
+
+  const pinchStartDistance =
+    useRef(null);
+
+  const pinchStartScale =
+    useRef(
+      canvasItem.scale ?? 1
+    );
+
+  const isPinching =
+    useRef(false);
+
+  const clampScale = (value) => {
+    return Math.min(
+      MAX_ITEM_SCALE,
+      Math.max(
+        MIN_ITEM_SCALE,
+        value
+      )
+    );
+  };
+
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder:
+        () => true,
 
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder:
+        () => true,
 
-      onPanResponderGrant: () => {
-        pan.setOffset({
-          x: pan.x._value,
-          y: pan.y._value,
-        });
+      onPanResponderGrant: (
+        event
+      ) => {
+        dragStartPosition.current = {
+          ...currentPosition.current,
+        };
 
-        pan.setValue({
-          x: 0,
-          y: 0,
-        });
+        const touches =
+          event.nativeEvent.touches;
+
+        if (touches.length >= 2) {
+          isPinching.current = true;
+
+          pinchStartDistance.current =
+            getTouchDistance(
+              touches
+            );
+
+          pinchStartScale.current =
+            currentScale.current;
+        } else {
+          isPinching.current = false;
+
+          pinchStartDistance.current =
+            null;
+        }
       },
 
-      onPanResponderMove: Animated.event(
-        [
-          null,
-          {
-            dx: pan.x,
-            dy: pan.y,
-          },
-        ],
-        {
-          useNativeDriver: false,
+      onPanResponderMove: (
+        event,
+        gestureState
+      ) => {
+        const touches =
+          event.nativeEvent.touches;
+
+        /*
+         * TWO FINGERS:
+         * resize the clothing item.
+         */
+        if (touches.length >= 2) {
+          const distance =
+            getTouchDistance(
+              touches
+            );
+
+          if (
+            !isPinching.current ||
+            !pinchStartDistance.current
+          ) {
+            isPinching.current = true;
+
+            pinchStartDistance.current =
+              distance;
+
+            pinchStartScale.current =
+              currentScale.current;
+
+            return;
+          }
+
+          const scaleChange =
+            distance /
+            pinchStartDistance.current;
+
+          const nextScale =
+            clampScale(
+              pinchStartScale.current *
+                scaleChange
+            );
+
+          currentScale.current =
+            nextScale;
+
+          scale.setValue(
+            nextScale
+          );
+
+          return;
         }
-      ),
+
+        /*
+         * ONE FINGER:
+         * move the clothing item.
+         */
+        if (!isPinching.current) {
+          const nextX =
+            dragStartPosition.current.x +
+            gestureState.dx;
+
+          const nextY =
+            dragStartPosition.current.y +
+            gestureState.dy;
+
+          currentPosition.current = {
+            x: nextX,
+            y: nextY,
+          };
+
+          pan.setValue({
+            x: nextX,
+            y: nextY,
+          });
+        }
+      },
 
       onPanResponderRelease: () => {
-        pan.flattenOffset();
+        isPinching.current = false;
+
+        pinchStartDistance.current =
+          null;
+
+        onUpdate(
+          canvasItem.canvasId,
+          {
+            x: currentPosition.current.x,
+            y: currentPosition.current.y,
+            scale:
+              currentScale.current,
+          }
+        );
       },
+
+      onPanResponderTerminate:
+        () => {
+          isPinching.current = false;
+
+          pinchStartDistance.current =
+            null;
+
+          onUpdate(
+            canvasItem.canvasId,
+            {
+              x: currentPosition.current.x,
+              y: currentPosition.current.y,
+              scale:
+                currentScale.current,
+            }
+          );
+        },
     })
   ).current;
 
@@ -88,30 +281,73 @@ function DraggableCanvasItem({
       style={[
         styles.canvasPiece,
         {
-          transform: pan.getTranslateTransform(),
+          transform: [
+            {
+              translateX: pan.x,
+            },
+            {
+              translateY: pan.y,
+            },
+            {
+              scale,
+            },
+          ],
         },
       ]}
     >
+        {!hideControls && (
+        <Animated.View
+        style={[
+            styles.removeButtonWrapper,
+            {
+                transform: [
+                    {
+                        scale: inverseScale,
+                    },
+                ],
+            },
+        ]}
+        >
       <Pressable
-        style={styles.removeButton}
-        onPress={() => onRemove(canvasItem.canvasId)}
+        style={
+          styles.removeButton
+        }
+        onPress={() =>
+          onRemove(
+            canvasItem.canvasId
+          )
+        }
       >
-        <Text style={styles.removeButtonText}>
+        <Text
+          style={
+            styles.removeButtonText
+          }
+        >
           ×
         </Text>
       </Pressable>
+      </Animated.View>
+        )}
 
       {imageSource ? (
         <Image
           source={{
             uri: imageSource,
           }}
-          style={styles.canvasImage}
+          style={
+            styles.canvasImage
+          }
           resizeMode="contain"
         />
       ) : (
-        <View style={styles.noImage}>
-          <Text style={styles.noImageText}>
+        <View
+          style={styles.noImage}
+        >
+          <Text
+            style={
+              styles.noImageText
+            }
+          >
             No photo
           </Text>
         </View>
@@ -126,13 +362,25 @@ function DraggableCanvasItem({
 
 export default function OutfitBuilderScreen({
   route,
+  navigation,
 }) {
-  const { clothingItems } = useCloset();
+  const { clothingItems,saveOutfit, } = useCloset();
 
-  const {
-    selectedOccasions = [],
-    startingPieces,
-  } = route.params;
+  const params =
+  route.params || {};
+
+const outfitToEdit =
+  params.outfitToEdit || null;
+
+const selectedOccasions =
+  params.selectedOccasions ??
+  outfitToEdit?.occasions ??
+  [];
+
+const selectedWeather =
+  params.selectedWeather ??
+  outfitToEdit?.weather ??
+  null;
 
   const [canvasItems, setCanvasItems] =
     useState([]);
@@ -146,19 +394,166 @@ export default function OutfitBuilderScreen({
   const [selectedItemIds, setSelectedItemIds] =
     useState([]);
 
-  const [canvasSize, setCanvasSize] = useState({
+  const [canvasSize, setCanvasSize] =
+  useState({
     width: 0,
     height: 0,
   });
+
+const canvasRef =
+  useRef(null);
+
+const hasLoadedEdit =
+  useRef(false);
+
+const [
+  isSaving,
+  setIsSaving,
+] = useState(false);
+
+const [
+  isCapturing,
+  setIsCapturing,
+] = useState(false);
+
+/* -------------------------------- */
+/* LOAD EXISTING OUTFIT FOR EDITING */
+/* -------------------------------- */
+
+useEffect(() => {
+  if (
+    !outfitToEdit ||
+    hasLoadedEdit.current ||
+    canvasSize.width === 0 ||
+    canvasSize.height === 0
+  ) {
+    return;
+  }
+
+  const restoredItems =
+    (outfitToEdit.pieces || [])
+      .map((piece) => {
+        const closetItem =
+          clothingItems.find(
+            (item) =>
+              item.id ===
+              piece.itemId
+          );
+
+        if (!closetItem) {
+          return null;
+        }
+
+        const x =
+          piece.normalizedX != null
+            ? piece.normalizedX *
+              canvasSize.width
+            : piece.x;
+
+        const y =
+          piece.normalizedY != null
+            ? piece.normalizedY *
+              canvasSize.height
+            : piece.y;
+
+        return {
+          ...closetItem,
+
+          canvasId:
+            piece.canvasId ||
+            `${piece.itemId}-${Date.now()}`,
+
+          x,
+          y,
+
+          scale:
+            piece.scale ?? 1,
+        };
+      })
+      .filter(Boolean);
+
+  setCanvasItems(
+    restoredItems
+  );
+
+  hasLoadedEdit.current =
+    true;
+}, [
+  outfitToEdit,
+  clothingItems,
+  canvasSize.width,
+  canvasSize.height,
+]);
+
 
   /* -------------------------------- */
   /* CATEGORY FILTER                  */
   /* -------------------------------- */
 
-  const categoryItems = clothingItems.filter(
-    (item) => item.category === activeCategory
+  const availableCategories =
+  CLOTHING_CATEGORIES.filter(
+    (category) =>
+      clothingItems.some(
+        (item) => {
+          const matchesCategory =
+            item.category === category;
+
+          const matchesWeather =
+            !selectedWeather ||
+            (
+              item.weather || []
+            ).includes(
+              selectedWeather
+            );
+
+          const matchesOccasion =
+            selectedOccasions.length ===
+              0 ||
+            selectedOccasions.some(
+              (occasion) =>
+                (
+                  item.occasions || []
+                ).includes(
+                  occasion
+                )
+            );
+
+          return (
+            matchesCategory &&
+            matchesWeather &&
+            matchesOccasion
+          );
+        }
+      )
   );
 
+  const categoryItems = clothingItems.filter(
+  (item) => {
+    const matchesCategory =
+      item.category === activeCategory;
+
+    const matchesWeather =
+      !selectedWeather ||
+      (item.weather || []).includes(
+        selectedWeather
+      );
+
+    const matchesOccasion =
+      selectedOccasions.length === 0 ||
+      selectedOccasions.some(
+        (occasion) =>
+          (item.occasions || []).includes(
+            occasion
+          )
+      );
+
+    return (
+      matchesCategory &&
+      matchesWeather &&
+      matchesOccasion
+    );
+  }
+);
   /* -------------------------------- */
   /* SELECT / UNSELECT CLOTHING       */
   /* -------------------------------- */
@@ -241,15 +636,23 @@ export default function OutfitBuilderScreen({
           index * 12
         );
 
-        return {
-          ...item,
+const defaults =
+  CANVAS_DEFAULTS[
+    item.category
+  ] || CANVAS_DEFAULTS.Tops;
 
-          canvasId:
-            `${item.id}-${Date.now()}-${index}`,
+return {
+  ...item,
 
-          x: position.x,
-          y: position.y,
-        };
+  canvasId:
+    `${item.id}-${Date.now()}-${index}`,
+
+  x: position.x,
+  y: position.y,
+
+  scale:
+    defaults.scale ?? 1,
+};
       });
 
     setCanvasItems((currentItems) => [
@@ -274,6 +677,186 @@ export default function OutfitBuilderScreen({
     );
   };
 
+  const updateCanvasItem = (
+    canvasId,
+    updates
+  ) => {
+    setCanvasItems (
+        (currentItems) =>
+            currentItems.map(
+                (item) =>
+                    item.canvasId ===
+                canvasId? {
+                    ...item,
+                    ...updates,
+                }
+                : item
+            )
+    );
+  };
+  const handleSaveOutfit =
+  async () => {
+    if (
+      canvasItems.length === 0
+    ) {
+      Alert.alert(
+        "Empty Outfit",
+        "Add at least one piece before saving."
+      );
+
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      /*
+       * Temporarily hide controls
+       * before taking the screenshot.
+       */
+      setIsCapturing(true);
+
+      /*
+       * Give React a moment to render
+       * without the delete buttons.
+       */
+      await new Promise(
+        (resolve) =>
+          setTimeout(
+            resolve,
+            80
+          )
+      );
+
+      const temporaryImageUri =
+        await captureRef(
+          canvasRef,
+          {
+            format: "png",
+            quality: 1,
+            result: "tmpfile",
+          }
+        );
+
+      const outfitId =
+        outfitToEdit?.id ||
+        `outfit-${Date.now()}`;
+
+      const outfitDirectory =
+        `${FileSystem.documentDirectory}outfits/`;
+
+      await FileSystem.makeDirectoryAsync(
+        outfitDirectory,
+        {
+          intermediates: true,
+        }
+      );
+
+      const permanentImageUri =
+        `${outfitDirectory}${outfitId}.png`;
+
+      /*
+       * If we're editing an existing
+       * outfit, replace its old preview.
+       */
+      const existingImage =
+        await FileSystem.getInfoAsync(
+          permanentImageUri
+        );
+
+      if (
+        existingImage.exists
+      ) {
+        await FileSystem.deleteAsync(
+          permanentImageUri,
+          {
+            idempotent: true,
+          }
+        );
+      }
+
+      await FileSystem.copyAsync({
+        from: temporaryImageUri,
+        to: permanentImageUri,
+      });
+
+      const pieces =
+        canvasItems.map(
+          (item) => ({
+            canvasId:
+              item.canvasId,
+
+            itemId: item.id,
+
+            x: item.x,
+            y: item.y,
+
+            normalizedX:
+              canvasSize.width > 0
+                ? item.x /
+                  canvasSize.width
+                : 0,
+
+            normalizedY:
+              canvasSize.height > 0
+                ? item.y /
+                  canvasSize.height
+                : 0,
+
+            scale:
+              item.scale ?? 1,
+          })
+        );
+
+      saveOutfit({
+        id: outfitId,
+
+        imageUri:
+          permanentImageUri,
+
+        occasions:
+          selectedOccasions,
+
+        weather:
+          selectedWeather,
+
+        pieces,
+
+        canvasWidth:
+          canvasSize.width,
+
+        canvasHeight:
+          canvasSize.height,
+
+        createdAt:
+          outfitToEdit?.createdAt,
+      });
+
+      setIsCapturing(false);
+
+      navigation.navigate(
+        "MainTabs",
+        {
+          screen: "Home",
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Error saving outfit:",
+        error
+      );
+
+      setIsCapturing(false);
+
+      Alert.alert(
+        "Couldn't Save Outfit",
+        "Something went wrong while saving your outfit."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <SafeScreen>
       <ScrollView
@@ -292,30 +875,35 @@ export default function OutfitBuilderScreen({
           Build your look
         </Text>
 
-        {/* OCCASIONS */}
+        
 
-        <View style={styles.occasionRow}>
-          {selectedOccasions.map(
-            (occasion) => (
-              <View
-                key={occasion}
-                style={styles.occasionChip}
-              >
-                <Text
-                  style={
-                    styles.occasionChipText
-                  }
-                >
-                  {occasion}
-                </Text>
-              </View>
-            )
-          )}
-        </View>
+        {/* OCCASIONS */}
+<View style={styles.occasionRow}>
+  {selectedWeather && (
+    <View style={styles.weatherChip}>
+      <Text style={styles.weatherChipText}>
+        {selectedWeather}
+      </Text>
+    </View>
+  )}
+
+  {selectedOccasions.map((occasion) => (
+    <View
+      key={occasion}
+      style={styles.occasionChip}
+    >
+      <Text style={styles.occasionChipText}>
+        {occasion}
+      </Text>
+    </View>
+  ))}
+</View>
 
         {/* CANVAS */}
 
         <View
+          ref={canvasRef}
+          collapsable={false}
           style={styles.canvas}
           onLayout={(event) => {
             const {
@@ -358,9 +946,15 @@ export default function OutfitBuilderScreen({
               key={item.canvasId}
               canvasItem={item}
               onRemove={removeCanvasItem}
+              onUpdate={updateCanvasItem}
+              hideControls={isCapturing}
             />
           ))}
+
         </View>
+        <Text style={styles.pieceHint}>
+            Drag to move • Pinch to resize
+        </Text>
 
         {/* ADD PIECE BUTTON */}
 
@@ -378,6 +972,34 @@ export default function OutfitBuilderScreen({
               : "+ Add Piece"}
           </Text>
         </Pressable>
+        <Pressable
+  style={[
+    styles.saveOutfitButton,
+
+    (canvasItems.length === 0 ||
+      isSaving) &&
+      styles.saveOutfitButtonDisabled,
+  ]}
+  disabled={
+    canvasItems.length === 0 ||
+    isSaving
+  }
+  onPress={
+    handleSaveOutfit
+  }
+>
+  <Text
+    style={
+      styles.saveOutfitButtonText
+    }
+  >
+    {isSaving
+      ? "Saving..."
+      : outfitToEdit
+        ? "Update Outfit"
+        : "Save Outfit"}
+  </Text>
+</Pressable>
 
         {/* CLOSET PICKER */}
 
@@ -405,7 +1027,7 @@ export default function OutfitBuilderScreen({
                 styles.categoryTabs
               }
             >
-              {CLOTHING_CATEGORIES.map(
+              {availableCategories.map(
                 (category) => {
                   const active =
                     activeCategory ===
@@ -583,9 +1205,7 @@ export default function OutfitBuilderScreen({
           </View>
         )}
 
-        <Text style={styles.pieceHint}>
-          Starting with {startingPieces} pieces
-        </Text>
+        
       </ScrollView>
     </SafeScreen>
   );
@@ -698,17 +1318,13 @@ const styles = StyleSheet.create({
   },
 
   removeButton: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#D94A4A",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 50,
-  },
+  width: 24,
+  height: 24,
+  borderRadius: 12,
+  backgroundColor: "#D94A4A",
+  justifyContent: "center",
+  alignItems: "center",
+},
 
   removeButtonText: {
     color: "#FFFFFF",
@@ -887,4 +1503,49 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: colors.secondaryText,
   },
+  weatherChip: {
+  backgroundColor: colors.accent,
+  borderRadius: 18,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+},
+
+weatherChipText: {
+  color: "#FFFFFF",
+  fontSize: 13,
+  fontWeight: "700",
+},
+removeButtonWrapper: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    zIndex: 50,
+},
+saveOutfitButton: {
+  marginTop: 18,
+
+  backgroundColor:
+    colors.accent,
+
+  borderRadius: 20,
+
+  paddingVertical: 17,
+
+  alignItems: "center",
+
+  justifyContent:
+    "center",
+},
+
+saveOutfitButtonDisabled: {
+  opacity: 0.4,
+},
+
+saveOutfitButtonText: {
+  color: "#FFFFFF",
+
+  fontSize: 16,
+
+  fontWeight: "700",
+},
 });
