@@ -371,6 +371,9 @@ export default function OutfitBuilderScreen({
 
 const outfitToEdit =
   params.outfitToEdit || null;
+  
+const accessoryToAdd =
+  params.accessoryToAdd || null;
 
 const selectedOccasions =
   params.selectedOccasions ??
@@ -430,61 +433,124 @@ useEffect(() => {
     return;
   }
 
-  const restoredItems =
-    (outfitToEdit.pieces || [])
-      .map((piece) => {
-        const closetItem =
-          clothingItems.find(
-            (item) =>
-              item.id ===
-              piece.itemId
-          );
+const restoredItems =
+  (outfitToEdit.pieces || [])
+    .map((piece) => {
+      const closetItem =
+        clothingItems.find(
+          (item) =>
+            item.id ===
+            piece.itemId
+        );
 
-        if (!closetItem) {
-          return null;
-        }
+      if (!closetItem) {
+        return null;
+      }
 
-        const x =
-          piece.normalizedX != null
-            ? piece.normalizedX *
-              canvasSize.width
-            : piece.x;
+      const x =
+        piece.normalizedX != null
+          ? piece.normalizedX *
+            canvasSize.width
+          : piece.x;
 
-        const y =
-          piece.normalizedY != null
-            ? piece.normalizedY *
-              canvasSize.height
-            : piece.y;
+      const y =
+        piece.normalizedY != null
+          ? piece.normalizedY *
+            canvasSize.height
+          : piece.y;
 
-        return {
-          ...closetItem,
+      return {
+        ...closetItem,
 
-          canvasId:
-            piece.canvasId ||
-            `${piece.itemId}-${Date.now()}`,
+        canvasId:
+          piece.canvasId ||
+          `${piece.itemId}-${Date.now()}`,
 
-          x,
-          y,
+        x,
+        y,
 
-          scale:
-            piece.scale ?? 1,
-        };
-      })
-      .filter(Boolean);
+        scale:
+          piece.scale ?? 1,
+      };
+    })
+    .filter(Boolean);
 
-  setCanvasItems(
-    restoredItems
-  );
+/*
+ * Start with the existing outfit pieces.
+ */
+let itemsToLoad = [
+  ...restoredItems,
+];
 
-  hasLoadedEdit.current =
-    true;
+/*
+ * If Home sent us a recommended accessory,
+ * automatically add it to the outfit.
+ */
+if (accessoryToAdd) {
+  const alreadyAdded =
+    itemsToLoad.some(
+      (item) =>
+        item.id ===
+        accessoryToAdd.id
+    );
+
+  if (!alreadyAdded) {
+    let defaults =
+      CANVAS_DEFAULTS.Accessories;
+
+    if (
+      accessoryToAdd.subCategory &&
+      ACCESSORY_CANVAS_DEFAULTS[
+        accessoryToAdd.subCategory
+      ]
+    ) {
+      defaults = {
+        ...defaults,
+
+        ...ACCESSORY_CANVAS_DEFAULTS[
+          accessoryToAdd.subCategory
+        ],
+      };
+    }
+
+    const accessoryX =
+      defaults.x *
+        canvasSize.width -
+      CANVAS_ITEM_WIDTH / 2;
+
+    const accessoryY =
+      defaults.y *
+        canvasSize.height -
+      CANVAS_ITEM_HEIGHT / 2;
+
+    itemsToLoad.push({
+      ...accessoryToAdd,
+
+      canvasId:
+        `${accessoryToAdd.id}-${Date.now()}`,
+
+      x: accessoryX,
+      y: accessoryY,
+
+      scale:
+        defaults.scale ?? 1,
+    });
+  }
+}
+
+setCanvasItems(
+  itemsToLoad
+);
+
+hasLoadedEdit.current =
+  true;
 }, [
   outfitToEdit,
+  accessoryToAdd,
   clothingItems,
   canvasSize.width,
   canvasSize.height,
 ]);
-
 
   /* -------------------------------- */
   /* CATEGORY FILTER                  */
@@ -751,34 +817,16 @@ return {
           intermediates: true,
         }
       );
+      const imageVersion =
+         Date.now();
 
-      const permanentImageUri =
-        `${outfitDirectory}${outfitId}.png`;
+    const permanentImageUri =
+        `${outfitDirectory}${outfitId}-${imageVersion}.png`;
 
-      /*
-       * If we're editing an existing
-       * outfit, replace its old preview.
-       */
-      const existingImage =
-        await FileSystem.getInfoAsync(
-          permanentImageUri
-        );
-
-      if (
-        existingImage.exists
-      ) {
-        await FileSystem.deleteAsync(
-          permanentImageUri,
-          {
-            idempotent: true,
-          }
-        );
-      }
-
-      await FileSystem.copyAsync({
+    await FileSystem.copyAsync({
         from: temporaryImageUri,
         to: permanentImageUri,
-      });
+    });
 
       const pieces =
         canvasItems.map(
@@ -901,10 +949,14 @@ return {
 
         {/* CANVAS */}
 
-        <View
-          ref={canvasRef}
-          collapsable={false}
-          style={styles.canvas}
+       <View
+        ref={canvasRef}
+        collapsable={false}
+        style={[
+            styles.canvas,
+            isCapturing &&
+                styles.canvasCapture,
+        ]}
           onLayout={(event) => {
             const {
               width,
@@ -1271,6 +1323,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
+  canvasCapture: {
+    borderWidth: 0,
+    borderRadius: 0,
+},
 
   emptyCanvas: {
     ...StyleSheet.absoluteFillObject,

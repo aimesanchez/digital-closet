@@ -4,18 +4,109 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Image,
 } from "react-native";
 
 import { colors } from "../constants/colors";
 import SafeScreen from "../components/SafeScreen";
 import { useWeather } from "../context/WeatherContext";
+import { useCloset } from "../context/ClosetContext";
 
-export default function HomeScreen() {
+export default function HomeScreen({
+  navigation,
+}) {
   const {
     currentWeather,
     weatherLoading,
     weatherError,
   } = useWeather();
+
+  const {
+    clothingItems,
+    currentOutfit,
+  } = useCloset();
+
+  const currentOutfitItemIds =
+  new Set(
+    (currentOutfit?.pieces || []).map(
+      (piece) => piece.itemId
+    )
+  );
+
+const accessoryRecommendations =
+  currentOutfit
+    ? clothingItems
+        .filter(
+          (item) =>
+            item.category ===
+              "Accessories" &&
+            !currentOutfitItemIds.has(
+              item.id
+            )
+        )
+        .map((item) => {
+          let score = 0;
+
+          const matchesWeather =
+            !currentOutfit.weather ||
+            (item.weather || []).includes(
+              currentOutfit.weather
+            );
+
+          const matchesOccasion =
+            !currentOutfit.occasions
+              ?.length ||
+            currentOutfit.occasions.some(
+              (occasion) =>
+                (
+                  item.occasions || []
+                ).includes(
+                  occasion
+                )
+            );
+
+          if (matchesWeather) {
+            score += 3;
+          }
+
+          if (matchesOccasion) {
+            score += 3;
+          }
+
+          const typeBonus = {
+            Glasses: 3,
+            Jewelry: 3,
+            Belt: 2,
+            Bag: 2,
+            Hat: 2,
+            Scarf: 1,
+            "Hair Accessory": 1,
+            Other: 0,
+          };
+
+          score +=
+            typeBonus[
+              item.subCategory
+            ] || 0;
+
+          return {
+            ...item,
+            recommendationScore:
+              score,
+          };
+        })
+        .filter(
+          (item) =>
+            item.recommendationScore >
+            0
+        )
+        .sort(
+          (a, b) =>
+            b.recommendationScore -
+            a.recommendationScore
+        )
+        .slice(0, 4)
+    : [];
 
   return (
     <SafeScreen>
@@ -157,145 +248,159 @@ export default function HomeScreen() {
           ) : null}
         </View>
 
-        {/* TODAY'S OUTFIT */}
+{/* TODAY'S OUTFIT */}
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            Today's Outfit
-          </Text>
+<View style={styles.sectionHeader}>
+  <Text style={styles.sectionTitle}>
+    Today's Outfit
+  </Text>
 
-          <Pressable>
-            <Text style={styles.editText}>
-              Edit
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.outfitCard}>
-          <View
-            style={
-              styles.clothingPlaceholder
+  {currentOutfit && (
+    <Pressable
+      onPress={() =>
+        navigation
+          .getParent()
+          ?.navigate(
+            "OutfitBuilder",
+            {
+              outfitToEdit:
+                currentOutfit,
             }
-          >
-            <Text
+          )
+      }
+    >
+      <Text style={styles.editText}>
+        Edit
+      </Text>
+    </Pressable>
+  )}
+</View>
+
+{currentOutfit ? (
+  <View style={styles.outfitPreview}>
+    <Image
+      key={
+        currentOutfit.updatedAt
+      }
+      source={{
+        uri:
+          currentOutfit.imageUri,
+      }}
+      style={
+        styles.outfitPreviewImage
+      }
+      resizeMode="contain"
+    />
+  </View>
+) : (
+  <Pressable
+    style={styles.emptyOutfitCard}
+    onPress={() =>
+      navigation.navigate(
+        "Create Outfit"
+      )
+    }
+  >
+    <Text
+      style={
+        styles.emptyOutfitTitle
+      }
+    >
+      Create today's outfit
+    </Text>
+
+    <Text
+      style={
+        styles.emptyOutfitSubtitle
+      }
+    >
+      Build a look from your closet
+    </Text>
+  </Pressable>
+)}
+
+       {/* SUGGESTED ACCESSORIES */}
+
+{accessoryRecommendations.length >
+  0 && (
+  <>
+    <Text style={styles.sectionTitle}>
+      Suggested Accessories
+    </Text>
+
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={
+        false
+      }
+      style={
+        styles.accessoriesContainer
+      }
+    >
+      {accessoryRecommendations.map(
+        (item) => {
+          const imageSource =
+            item.processedImageUri ||
+            item.imageUri;
+
+          return (
+            <Pressable
+              key={item.id}
               style={
-                styles.placeholderText
+                styles.accessoryCard
+              }
+              onPress={() =>
+                navigation
+                  .getParent()
+                  ?.navigate(
+                    "OutfitBuilder",
+                    {
+                      outfitToEdit:
+                        currentOutfit,
+
+                      accessoryToAdd:
+                        item,
+                    }
+                  )
               }
             >
-              Top
-            </Text>
-          </View>
+              {imageSource && (
+                <Image
+                  source={{
+                    uri: imageSource,
+                  }}
+                  style={
+                    styles.accessoryImage
+                  }
+                  resizeMode="contain"
+                />
+              )}
 
-          <View
-            style={
-              styles.clothingPlaceholder
-            }
-          >
-            <Text
-              style={
-                styles.placeholderText
-              }
-            >
-              Bottom
-            </Text>
-          </View>
+              <Text
+                style={
+                  styles.accessoryName
+                }
+                numberOfLines={1}
+              >
+                {item.name ||
+                  item.subCategory ||
+                  "Accessory"}
+              </Text>
 
-          <View
-            style={
-              styles.clothingPlaceholder
-            }
-          >
-            <Text
-              style={
-                styles.placeholderText
-              }
-            >
-              Shoes
-            </Text>
-          </View>
-        </View>
-
-        {/* SUGGESTED ACCESSORIES */}
-
-        <Text style={styles.sectionTitle}>
-          Suggested Accessories
-        </Text>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          style={
-            styles.accessoriesContainer
-          }
-        >
-          <View
-            style={
-              styles.accessoryCard
-            }
-          >
-            <Text
-              style={
-                styles.accessoryEmoji
-              }
-            >
-              🕶️
-            </Text>
-
-            <Text
-              style={
-                styles.accessoryName
-              }
-            >
-              Sunglasses
-            </Text>
-          </View>
-
-          <View
-            style={
-              styles.accessoryCard
-            }
-          >
-            <Text
-              style={
-                styles.accessoryEmoji
-              }
-            >
-              👜
-            </Text>
-
-            <Text
-              style={
-                styles.accessoryName
-              }
-            >
-              Bag
-            </Text>
-          </View>
-
-          <View
-            style={
-              styles.accessoryCard
-            }
-          >
-            <Text
-              style={
-                styles.accessoryEmoji
-              }
-            >
-              🧢
-            </Text>
-
-            <Text
-              style={
-                styles.accessoryName
-              }
-            >
-              Hat
-            </Text>
-          </View>
-        </ScrollView>
+              <Text
+                style={
+                  styles.accessoryAddText
+                }
+              >
+                + Add
+              </Text>
+            </Pressable>
+          );
+        }
+      )}
+    </ScrollView>
+  </>
+)}
 
         {/* CLOSET */}
 
@@ -525,44 +630,58 @@ const styles = StyleSheet.create({
   },
 
   /* OUTFIT */
+outfitPreview: {
+  width: "100%",
 
-  outfitCard: {
-    backgroundColor:
-      colors.surface,
+  height: 390,
 
-    borderRadius: 22,
+  marginBottom: 30,
 
-    padding: 16,
+  justifyContent: "center",
+  alignItems: "center",
+},
 
-    marginBottom: 28,
+outfitPreviewImage: {
+  width: "100%",
+  height: "100%",
+},
 
-    borderWidth: 1,
+emptyOutfitCard: {
+  minHeight: 180,
 
-    borderColor:
-      colors.border,
-  },
+  backgroundColor:
+    colors.surface,
 
-  clothingPlaceholder: {
-    height: 75,
+  borderRadius: 24,
 
-    borderRadius: 14,
+  marginBottom: 30,
 
-    backgroundColor:
-      colors.background,
+  justifyContent: "center",
+  alignItems: "center",
 
-    justifyContent: "center",
-    alignItems: "center",
+  paddingHorizontal: 24,
 
-    marginBottom: 10,
-  },
+  borderWidth: 1,
+  borderColor:
+    colors.border,
+},
 
-  placeholderText: {
-    color:
-      colors.secondaryText,
+emptyOutfitTitle: {
+  fontSize: 17,
 
-    fontWeight: "500",
-  },
+  fontWeight: "700",
 
+  color: colors.text,
+},
+
+emptyOutfitSubtitle: {
+  marginTop: 6,
+
+  fontSize: 13,
+
+  color:
+    colors.secondaryText,
+},
   /* ACCESSORIES */
 
   accessoriesContainer: {
@@ -570,36 +689,86 @@ const styles = StyleSheet.create({
   },
 
   accessoryCard: {
-    width: 105,
-    height: 105,
+  width: 120,
 
-    backgroundColor:
-      colors.surface,
+  backgroundColor:
+    colors.surface,
 
-    borderRadius: 18,
+  borderRadius: 20,
 
-    marginRight: 12,
+  marginRight: 12,
 
-    justifyContent: "center",
-    alignItems: "center",
+  paddingTop: 10,
+  paddingHorizontal: 10,
+  paddingBottom: 12,
 
-    borderWidth: 1,
+  alignItems: "center",
 
-    borderColor:
-      colors.border,
-  },
+  borderWidth: 1,
 
-  accessoryEmoji: {
-    fontSize: 28,
-
-    marginBottom: 8,
-  },
+  borderColor:
+    colors.border,
+},
 
   accessoryName: {
-    fontSize: 13,
+    fontSize: 12,
+
+    fontWeight: "600",
 
     color: colors.text,
+
+    textAlign: "center"
   },
+  savedOutfitCard: {
+  width: "100%",
+
+  aspectRatio: 1,
+
+  backgroundColor:
+    colors.surface,
+
+  borderRadius: 22,
+
+  marginBottom: 28,
+
+  borderWidth: 1,
+
+  borderColor:
+    colors.border,
+
+  overflow: "hidden",
+},
+
+savedOutfitImage: {
+  width: "100%",
+  height: "100%",
+},
+
+emptyOutfitText: {
+  color:
+    colors.secondaryText,
+
+  textAlign: "center",
+
+  paddingVertical: 30,
+},
+
+accessoryImage: {
+  width: 88,
+  height: 88,
+
+  marginBottom: 4,
+},
+
+accessoryAddText: {
+  color: colors.accent,
+
+  fontSize: 12,
+
+  fontWeight: "700",
+
+  marginTop: 5,
+},
 
   /* CLOSET */
 
