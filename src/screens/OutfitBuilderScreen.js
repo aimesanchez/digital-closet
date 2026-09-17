@@ -1466,12 +1466,14 @@ const styles = StyleSheet.create({
   itemGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 14,
+    justifyContent: "flex-start",
+    columnGap: 12,
+    rowGap: 16,
   },
 
   pickerItem: {
-    width: "31%",
+    width: "30%",
+    alignItems: "center",
     borderWidth: 2,
     borderColor: "transparent",
     borderRadius: 16,
@@ -1495,6 +1497,8 @@ const styles = StyleSheet.create({
 
   pickerImage: {
     width: "100%",
+    aspectRatio: 1,
+    borderRadisu:14,
     height: "100%",
   },
 

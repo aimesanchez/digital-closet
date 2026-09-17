@@ -270,6 +270,28 @@ console.log(
     );
   };
 
+/* -------------------------------- */
+/* UPDATE CLOTHING ITEM             */
+/* -------------------------------- */
+
+const updateClothingItem = (
+  itemId,
+  updates
+) => {
+  setClothingItems(
+    (currentItems) =>
+      currentItems.map(
+        (item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                ...updates,
+              }
+            : item
+      )
+  );
+};
+
   /* -------------------------------- */
   /* SAVE / UPDATE OUTFIT             */
   /* -------------------------------- */
@@ -342,6 +364,7 @@ console.log(
       value={{
         clothingItems,
         addClothingItem,
+        updateClothingItem,
         isClosetLoaded,
 
         savedOutfits,

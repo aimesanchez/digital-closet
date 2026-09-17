@@ -36,8 +36,38 @@ import SafeScreen from "../components/SafeScreen";
 
 export default function AddItemScreen({
   navigation,
+  route,
 }) {
-  const { addClothingItem } = useCloset();
+  const {
+    addClothingItem,
+    updateClothingItem,
+    clothingItems,
+  } = useCloset();
+
+  const itemToEdit =
+    route.params?.itemToEdit || null;
+
+  const isEditing =
+    Boolean(itemToEdit);
+
+  const DEFAULT_OCCASIONS = [
+  "Casual",
+  "School / Work",
+  "Formal",
+  "Active / Gym",
+  "Date Night",
+];
+
+const availableOccasions = [
+  ...new Set([
+    ...DEFAULT_OCCASIONS,
+
+    ...clothingItems.flatMap(
+      (item) =>
+        item.occasions || []
+    ),
+  ]),
+];
 
   const webViewRef = useRef(null);
 
@@ -98,6 +128,81 @@ export default function AddItemScreen({
     customOccasion,
     setCustomOccasion,
   ] = useState("");
+
+  /* -------------------------------- */
+/* LOAD ITEM FOR EDITING            */
+/* -------------------------------- */
+
+useEffect(() => {
+  if (!itemToEdit) {
+    return;
+  }
+
+  setSelectedImage(
+    itemToEdit.imageUri ||
+      itemToEdit.processedImageUri ||
+      null
+  );
+
+  setProcessedImageUri(
+    itemToEdit.processedImageUri ||
+      itemToEdit.imageUri ||
+      null
+  );
+
+  setName(
+    itemToEdit.name || ""
+  );
+
+  setCategory(
+    itemToEdit.category || ""
+  );
+
+  setSubCategory(
+    itemToEdit.subCategory || ""
+  );
+
+  const defaultColors = [
+    "Black",
+    "White",
+    "Blue",
+    "Brown",
+    "Red",
+    "Green",
+  ];
+
+  if (
+    defaultColors.includes(
+      itemToEdit.color
+    )
+  ) {
+    setColor(
+      itemToEdit.color
+    );
+
+    setCustomColor("");
+  } else if (
+    itemToEdit.color
+  ) {
+    setColor("Other");
+
+    setCustomColor(
+      itemToEdit.color
+    );
+  }
+
+  setWeather(
+    itemToEdit.weather || []
+  );
+
+  setOccasions(
+    itemToEdit.occasions || []
+  );
+
+  setBackgroundStatus(
+    "ready"
+  );
+}, [itemToEdit]);
 
   /* -------------------------------- */
   /* SUBCATEGORY OPTIONS              */
@@ -596,7 +701,16 @@ console.log(
       timesWorn: 0,
     };
 
-    addClothingItem(newItem);
+    if (isEditing) {
+  updateClothingItem(
+    itemToEdit.id,
+    newItem
+  );
+} else {
+  addClothingItem(
+    newItem
+  );
+}
 
     /*
      * Reset form.
@@ -622,18 +736,24 @@ console.log(
     setIsRemovingBackground(false);
     setBackgroundStatus("idle");
 
-    Alert.alert(
-      "Saved!",
-      "Your clothing item was added to your closet.",
-      [
-        {
-          text: "OK",
+  Alert.alert(
+    isEditing
+    ? "Changes Saved!"
+    : "Saved!",
 
-          onPress: () =>
-            navigation.goBack(),
-        },
-      ]
-    );
+  isEditing
+    ? "Your clothing item was updated."
+    : "Your clothing item was added to your closet.",
+
+  [
+    {
+      text: "OK",
+
+      onPress: () =>
+        navigation.goBack(),
+    },
+  ]
+);
   };
 
   /* -------------------------------- */
@@ -680,14 +800,17 @@ console.log(
 
           <View style={styles.headerText}>
             <Text style={styles.title}>
-              Add Clothing
+              {isEditing
+              ? "Edit Clothing"
+              : "Add Clothing"}
             </Text>
 
             <Text
               style={styles.subtitle}
             >
-              Take a photo or choose one
-              from your library.
+            {isEditing
+            ?"Update your clothing details or replace the photo."
+            : "Take a photo or choose one from your library."}
             </Text>
           </View>
         </View>
@@ -788,7 +911,9 @@ console.log(
                   styles.secondaryButtonText
                 }
               >
-                Choose Another Photo
+                {isEditing
+                ?"Change Photo"
+                : "Choose Photo"}
               </Text>
             </Pressable>
 
@@ -1092,11 +1217,7 @@ console.log(
                 style={styles.optionRow}
               >
                 {[
-                  "Casual",
-                  "School / Work",
-                  "Formal",
-                  "Active / Gym",
-                  "Date Night",
+                  ...availableOccasions,
                   "Other",
                 ].map((item) => {
                   const isSelected =
@@ -1200,6 +1321,8 @@ console.log(
                 >
                   {isRemovingBackground
                     ? "Processing Photo..."
+                    : isEditing
+                    ? "Save Changes"
                     : "Save Item"}
                 </Text>
               </Pressable>

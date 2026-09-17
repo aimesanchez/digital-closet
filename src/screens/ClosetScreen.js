@@ -25,6 +25,7 @@ export default function ClosetScreen({ navigation }) {
   const [showOccasionOptions, setShowOccasionOptions] = useState(false);
   const [customOccasionFilter, setCustomOccasionFilter] = useState("");
 
+
   const [selectedColor, setSelectedColor] = useState("All");
   const [showColorOptions, setShowColorOptions] = useState(false);
 
@@ -315,12 +316,23 @@ export default function ClosetScreen({ navigation }) {
           })}
         </ScrollView>
 
-        {/* Clothing Grid */}
-        <View style={styles.grid}>
-          {filteredItems.map((item) => (
-            <ClothingCard key={item.id} item={item} />
-          ))}
-        </View>
+      {/* Clothing Grid */}
+<View style={styles.grid}>
+  {filteredItems.map((item) => (
+    <ClothingCard
+      key={item.id}
+      item={item}
+      onPress={() =>
+        navigation.navigate(
+          "AddItem",
+          {
+            itemToEdit: item,
+          }
+        )
+      }
+    />
+  ))}
+</View>
 
         {/* Add Clothing */}
         <Pressable 
@@ -446,6 +458,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
+  
   addItemButton: {
     backgroundColor: colors.accent,
     paddingVertical: 17,

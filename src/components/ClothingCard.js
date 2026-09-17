@@ -1,11 +1,25 @@
-import { View, Text, StyleSheet, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Pressable,
+} from "react-native";
+
 import { colors } from "../constants/colors";
 
-export default function ClothingCard({ item }) {
-  const imageSource = item.processedImageUri || item.imageUri;
+export default function ClothingCard({
+  item,
+  onPress,
+}) {
+  const imageSource =
+    item.processedImageUri || item.imageUri;
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={styles.card}
+      onPress={onPress}
+    >
       <View style={styles.imagePlaceholder}>
         {imageSource ? (
           <Image
@@ -14,16 +28,23 @@ export default function ClothingCard({ item }) {
             resizeMode="contain"
           />
         ) : (
-          <Text style={styles.placeholderText}>Photo</Text>
+          <Text style={styles.placeholderText}>
+            Photo
+          </Text>
         )}
       </View>
 
-      <Text style={styles.name} numberOfLines={1}>
+      <Text
+        style={styles.name}
+        numberOfLines={1}
+      >
         {item.name}
       </Text>
 
-      <Text style={styles.category}>{item.category}</Text>
-    </View>
+      <Text style={styles.category}>
+        {item.category}
+      </Text>
+    </Pressable>
   );
 }
 
