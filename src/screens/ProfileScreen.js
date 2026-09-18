@@ -7,100 +7,130 @@ import {
   View,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
+
 import { colors } from "../constants/colors";
+import { typography } from "../constants/typography";
 import SafeScreen from "../components/SafeScreen";
 import { useProfile } from "../context/ProfileContext";
 import { useCloset } from "../context/ClosetContext";
 
-import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system/legacy";
+export default function ProfileScreen({ navigation }) {
+  const { profile, saveProfile } = useProfile();
 
-export default function ProfileScreen({
-  navigation,
-}) {
-  const { profile, saveProfile, } = useProfile();
+  const { clothingItems, savedOutfits } = useCloset();
 
-  const {
-    clothingItems,
-    savedOutfits,
-  } = useCloset();
-
-  const profileInitial =
-    profile.name?.trim()
-      ? profile.name
-          .trim()
-          .charAt(0)
-          .toUpperCase()
-      : "?";
+  const profileInitial = profile.name?.trim()
+    ? profile.name.trim().charAt(0).toUpperCase()
+    : "?";
 
   const handleEditPhoto = async () => {
-  try {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (!permissionResult.granted) {
-      alert(
-        "Photo library permission is required to choose a profile picture."
-      );
-      return;
-    }
+      if (!permissionResult.granted) {
+        alert(
+          "Photo library permission is required to choose a profile picture."
+        );
+        return;
+      }
 
-    const result =
-      await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+      const result =
+        await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const selectedImageUri = result.assets[0].uri;
+
+      const profileDirectory =
+        `${FileSystem.documentDirectory}profile/`;
+
+      const directoryInfo =
+        await FileSystem.getInfoAsync(
+          profileDirectory
+        );
+
+      if (!directoryInfo.exists) {
+        await FileSystem.makeDirectoryAsync(
+          profileDirectory,
+          {
+            intermediates: true,
+          }
+        );
+      }
+
+      const permanentImageUri =
+        `${profileDirectory}profile-${Date.now()}.jpg`;
+
+      await FileSystem.copyAsync({
+        from: selectedImageUri,
+        to: permanentImageUri,
       });
 
-    if (result.canceled) {
-      return;
-    }
-
-    const selectedImageUri =
-      result.assets[0].uri;
-
-    const profileDirectory =
-      `${FileSystem.documentDirectory}profile/`;
-
-    const directoryInfo =
-      await FileSystem.getInfoAsync(
-        profileDirectory
+      await saveProfile({
+        ...profile,
+        profileImageUri: permanentImageUri,
+      });
+    } catch (error) {
+      console.error(
+        "Error selecting profile photo:",
+        error
       );
 
-    if (!directoryInfo.exists) {
-      await FileSystem.makeDirectoryAsync(
-        profileDirectory,
-        {
-          intermediates: true,
-        }
+      alert(
+        "Something went wrong while selecting your photo."
       );
     }
+  };
 
-    const permanentImageUri =
-      `${profileDirectory}profile-${Date.now()}.jpg`;
+  const MenuRow = ({
+    icon,
+    title,
+    subtitle,
+    onPress,
+  }) => (
+    <Pressable
+      style={({ pressed }) => [
+        styles.menuRow,
+        pressed && styles.menuRowPressed,
+      ]}
+      onPress={onPress}
+    >
+      <View style={styles.menuIcon}>
+        <Ionicons
+          name={icon}
+          size={20}
+          color={colors.accent}
+        />
+      </View>
 
-    await FileSystem.copyAsync({
-      from: selectedImageUri,
-      to: permanentImageUri,
-    });
+      <View style={styles.menuTextContainer}>
+        <Text style={styles.menuTitle}>
+          {title}
+        </Text>
 
-    await saveProfile({
-      ...profile,
-      profileImageUri:
-        permanentImageUri,
-    });
-  } catch (error) {
-    console.error(
-      "Error selecting profile photo:",
-      error
-    );
+        <Text style={styles.menuSubtitle}>
+          {subtitle}
+        </Text>
+      </View>
 
-    alert(
-      "Something went wrong while selecting your photo."
-    );
-  }
-};
+      <Ionicons
+        name="chevron-forward"
+        size={19}
+        color={colors.secondaryText}
+      />
+    </Pressable>
+  );
 
   return (
     <SafeScreen>
@@ -109,32 +139,48 @@ export default function ProfileScreen({
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* PROFILE HEADER */}
+        {/* PAGE TITLE */}
 
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            {profile.profileImageUri ? (
-              <Image
-                source={{
-                  uri: profile.profileImageUri,
-                }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Text style={styles.avatarText}>
-                {profileInitial}
-              </Text>
-            )}
-          </View>
+        <View style={styles.pageHeader}>
+          <Text style={styles.eyebrow}>
+            YOUR ACCOUNT
+          </Text>
 
-          <Pressable
-            onPress={handleEditPhoto}
+          <Text style={styles.pageTitle}>
+            Profile
+          </Text>
+        </View>
+
+        {/* PROFILE */}
+
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarWrapper}>
+            <View style={styles.avatar}>
+              {profile.profileImageUri ? (
+                <Image
+                  source={{
+                    uri: profile.profileImageUri,
+                  }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profileInitial}
+                </Text>
+              )}
+            </View>
+
+            <Pressable
+              style={styles.photoButton}
+              onPress={handleEditPhoto}
             >
-
-            <Text style={styles.editPhotoText}>
-              Edit Photo
-            </Text>
-          </Pressable>
+              <Ionicons
+                name="camera"
+                size={15}
+                color="#FFFFFF"
+              />
+            </Pressable>
+          </View>
 
           <Text style={styles.name}>
             {profile.name || "Your Name"}
@@ -145,126 +191,147 @@ export default function ProfileScreen({
               profile.phone ||
               "Add your contact information"}
           </Text>
+
+          <Pressable
+            style={styles.editProfileButton}
+            onPress={() =>
+              navigation
+                .getParent()
+                ?.navigate(
+                  "PersonalInformation"
+                )
+            }
+          >
+            <Ionicons
+              name="pencil-outline"
+              size={15}
+              color={colors.accent}
+            />
+
+            <Text style={styles.editProfileText}>
+              Edit profile
+            </Text>
+          </Pressable>
         </View>
 
-        {/* MY CLOSET */}
-
-        <Text style={styles.sectionLabel}>
-          MY CLOSET
-        </Text>
+        {/* WARDROBE STATS */}
 
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <Pressable
+            style={styles.statCard}
+            onPress={() =>
+              navigation.navigate("Closet")
+            }
+          >
+            <View style={styles.statIcon}>
+              <Ionicons
+                name="shirt-outline"
+                size={19}
+                color={colors.accent}
+              />
+            </View>
+
             <Text style={styles.statNumber}>
               {clothingItems.length}
             </Text>
 
             <Text style={styles.statLabel}>
-              Items
+              PIECES
             </Text>
-          </View>
+          </Pressable>
 
-          <View style={styles.statCard}>
+          <Pressable
+            style={styles.statCard}
+            onPress={() =>
+              navigation.navigate(
+                "Create Outfit"
+              )
+            }
+          >
+            <View style={styles.statIcon}>
+              <Ionicons
+                name="color-wand-outline"
+                size={19}
+                color={colors.accent}
+              />
+            </View>
+
             <Text style={styles.statNumber}>
               {savedOutfits.length}
             </Text>
 
             <Text style={styles.statLabel}>
-              Outfits
+              OUTFITS
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* ACCOUNT */}
 
-        <Text style={styles.sectionLabel}>
-          ACCOUNT
-        </Text>
-
-        <Pressable
-          style={styles.menuCard}
-          onPress={() => {
-            navigation
-            .getParent()
-            ?.navigate(
-              "PersonalInformation"
-            )
-          }}
-        >
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>
-              Personal Information
-            </Text>
-
-            <Text style={styles.menuSubtitle}>
-              Name, email & phone
-            </Text>
-          </View>
-
-          <Text style={styles.chevron}>
-            ›
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            ACCOUNT
           </Text>
-        </Pressable>
+
+          <View style={styles.menuGroup}>
+            <MenuRow
+              icon="person-outline"
+              title="Personal Information"
+              subtitle="Name, email & phone"
+              onPress={() =>
+                navigation
+                  .getParent()
+                  ?.navigate(
+                    "PersonalInformation"
+                  )
+              }
+            />
+          </View>
+        </View>
 
         {/* WARDROBE */}
 
-        <Text style={styles.sectionLabel}>
-          WARDROBE
-        </Text>
-
-        <Pressable
-          style={styles.menuCard}
-          onPress={() => 
-            navigation
-            .getParent()
-            ?.navigate(
-              "ClothingCare"
-            )
-          }
-        >
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>
-              Clothing Care
-            </Text>
-
-            <Text style={styles.menuSubtitle}>
-              Materials & care instructions
-            </Text>
-          </View>
-
-          <Text style={styles.chevron}>
-            ›
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            WARDROBE
           </Text>
-        </Pressable>
+
+          <View style={styles.menuGroup}>
+            <MenuRow
+              icon="heart-outline"
+              title="Clothing Care"
+              subtitle="Materials & care guidance"
+              onPress={() =>
+                navigation
+                  .getParent()
+                  ?.navigate(
+                    "ClothingCare"
+                  )
+              }
+            />
+          </View>
+        </View>
 
         {/* ABOUT */}
 
-        <Text style={styles.sectionLabel}>
-          ABOUT
-        </Text>
-
-        <Pressable
-          style={styles.menuCard}
-          onPress={() => {
-            navigation
-            .getParent()
-            ?.navigate("About")
-          }}
-        >
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>
-              About Digital Closet
-            </Text>
-
-            <Text style={styles.menuSubtitle}>
-              App information
-            </Text>
-          </View>
-
-          <Text style={styles.chevron}>
-            ›
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            ABOUT
           </Text>
-        </Pressable>
+
+          <View style={styles.menuGroup}>
+            <MenuRow
+              icon="information-circle-outline"
+              title="About Digital Closet"
+              subtitle="App information"
+              onPress={() =>
+                navigation
+                  .getParent()
+                  ?.navigate("About")
+              }
+            />
+          </View>
+        </View>
       </ScrollView>
     </SafeScreen>
   );
@@ -278,19 +345,46 @@ const styles = StyleSheet.create({
 
   container: {
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingTop: 26,
+    paddingBottom: 44,
   },
 
-  header: {
+  /* PAGE HEADER */
+
+  pageHeader: {
+    marginBottom: 24,
+  },
+
+  eyebrow: {
+    fontFamily: typography.bold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: colors.accent,
+    marginBottom: 3,
+  },
+
+  pageTitle: {
+    fontFamily: typography.extraBold,
+    fontSize: 34,
+    letterSpacing: -1.2,
+    color: colors.text,
+  },
+
+  /* PROFILE */
+
+  profileHeader: {
     alignItems: "center",
-    marginBottom: 34,
+    marginBottom: 28,
+  },
+
+  avatarWrapper: {
+    position: "relative",
   },
 
   avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 104,
+    height: 104,
+    borderRadius: 32,
     backgroundColor: colors.accent,
     justifyContent: "center",
     alignItems: "center",
@@ -303,80 +397,141 @@ const styles = StyleSheet.create({
   },
 
   avatarText: {
-    fontSize: 36,
-    fontWeight: "700",
+    fontFamily: typography.extraBold,
+    fontSize: 38,
     color: "#FFFFFF",
   },
 
-  editPhotoText: {
-    marginTop: 10,
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.accent,
+  photoButton: {
+    position: "absolute",
+    right: -4,
+    bottom: -4,
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: colors.background,
   },
 
   name: {
-    marginTop: 14,
-    fontSize: 25,
-    fontWeight: "700",
+    marginTop: 17,
+    fontFamily: typography.bold,
+    fontSize: 24,
+    letterSpacing: -0.5,
     color: colors.text,
   },
 
   contact: {
     marginTop: 4,
-    fontSize: 14,
-    color: colors.secondaryText,
-  },
-
-  sectionLabel: {
-    marginTop: 8,
-    marginBottom: 10,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: colors.secondaryText,
-  },
-
-  statsRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 28,
-  },
-
-  statCard: {
-    flex: 1,
-    minHeight: 100,
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  statNumber: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: colors.text,
-  },
-
-  statLabel: {
-    marginTop: 4,
+    fontFamily: typography.regular,
     fontSize: 13,
     color: colors.secondaryText,
   },
 
-  menuCard: {
+  editProfileButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 13,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.accentLight,
+  },
+
+  editProfileText: {
+    fontFamily: typography.semibold,
+    fontSize: 12,
+    color: colors.accent,
+  },
+
+  /* STATS */
+
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 32,
+  },
+
+  statCard: {
+    flex: 1,
+    minHeight: 130,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 17,
+    justifyContent: "center",
+  },
+
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.accentLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 13,
+  },
+
+  statNumber: {
+    fontFamily: typography.extraBold,
+    fontSize: 28,
+    letterSpacing: -0.8,
+    color: colors.text,
+  },
+
+  statLabel: {
+    marginTop: 2,
+    fontFamily: typography.bold,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: colors.secondaryText,
+  },
+
+  /* SECTIONS */
+
+  section: {
+    marginBottom: 25,
+  },
+
+  sectionLabel: {
+    marginBottom: 9,
+    fontFamily: typography.bold,
+    fontSize: 10,
+    letterSpacing: 1.3,
+    color: colors.secondaryText,
+  },
+
+  /* MENU */
+
+  menuGroup: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+
+  menuRow: {
     minHeight: 76,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 18,
-    paddingVertical: 15,
-    marginBottom: 24,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
+  },
+
+  menuRowPressed: {
+    opacity: 0.65,
+  },
+
+  menuIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: colors.accentLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 13,
   },
 
   menuTextContainer: {
@@ -384,20 +539,15 @@ const styles = StyleSheet.create({
   },
 
   menuTitle: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontFamily: typography.semibold,
+    fontSize: 14,
     color: colors.text,
   },
 
   menuSubtitle: {
-    marginTop: 4,
+    marginTop: 3,
+    fontFamily: typography.regular,
     fontSize: 12,
-    color: colors.secondaryText,
-  },
-
-  chevron: {
-    marginLeft: 12,
-    fontSize: 28,
     color: colors.secondaryText,
   },
 });

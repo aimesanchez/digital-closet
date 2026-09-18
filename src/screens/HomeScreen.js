@@ -7,7 +7,10 @@ import {
   Image,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
+
 import { colors } from "../constants/colors";
+import { typography } from "../constants/typography";
 import SafeScreen from "../components/SafeScreen";
 import { useWeather } from "../context/WeatherContext";
 import { useCloset } from "../context/ClosetContext";
@@ -15,6 +18,7 @@ import { useCloset } from "../context/ClosetContext";
 export default function HomeScreen({
   navigation,
 }) {
+
   const {
     currentWeather,
     weatherLoading,
@@ -119,17 +123,24 @@ const accessoryRecommendations =
 
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>
-              Good morning
-            </Text>
+            <View style={styles.header}>
+              <View>
+              <Text style={styles.greeting}>
+                GOOD MORNING
+                </Text>
 
-            <Text style={styles.name}>
-              Aime
-            </Text>
+                <Text style={styles.name}>
+                  Aime
+                  </Text>
+                </View>
+            </View>
           </View>
 
           <Pressable
             style={styles.profileButton}
+            onPress={() =>
+              navigation.navigate("Profile")
+            }
           >
             <Text
               style={
@@ -168,13 +179,17 @@ const accessoryRecommendations =
                 }
               >
                 <View>
-                  <Text
-                    style={
-                      styles.sectionLabel
-                    }
-                  >
-                    TODAY'S WEATHER
-                  </Text>
+                  <View style={styles.weatherLabelRow}>
+                    <Ionicons
+                      name="partly-sunny-outline"
+                      size={14}
+                      color="rgba(255,255,255,0.72)"
+                    />
+
+                    <Text style={styles.sectionLabel}>
+                      TODAY
+                    </Text>
+                  </View>
 
                   <Text
                     style={
@@ -216,34 +231,33 @@ const accessoryRecommendations =
                 °F
               </Text>
 
-              {currentWeather.rainExpected && (
-                <View
-                  style={
-                    styles.weatherNotice
-                  }
-                >
-                  <Text
-                    style={
-                      styles.weatherNoticeTitle
-                    }
-                  >
-                    Rain expected later
-                  </Text>
+              <View style={styles.weatherDetails}>
+  <View style={styles.weatherDetail}>
+    <Ionicons
+      name="water-outline"
+      size={17}
+      color="rgba(255,255,255,0.78)"
+    />
 
-                  <Text
-                    style={
-                      styles.weatherNoticeText
-                    }
-                  >
-                    {
-                      currentWeather.rainChance
-                    }
-                    % chance of rain today.
-                    Consider bringing an
-                    umbrella or rain layer.
-                  </Text>
-                </View>
-              )}
+    <Text style={styles.weatherDetailText}>
+      {currentWeather.rainChance}% rain
+    </Text>
+  </View>
+
+  <View style={styles.weatherDetailDivider} />
+
+  <View style={styles.weatherDetail}>
+    <Ionicons
+      name="sunny-outline"
+      size={17}
+      color="rgba(255,255,255,0.78)"
+    />
+
+    <Text style={styles.weatherDetailText}>
+      UV {currentWeather.uvIndex}
+    </Text>
+  </View>
+</View>
             </>
           ) : null}
         </View>
@@ -251,12 +265,19 @@ const accessoryRecommendations =
 {/* TODAY'S OUTFIT */}
 
 <View style={styles.sectionHeader}>
-  <Text style={styles.sectionTitle}>
-    Today's Outfit
-  </Text>
+  <View>
+    <Text style={styles.sectionEyebrow}>
+      YOUR LOOK
+    </Text>
+
+    <Text style={styles.sectionTitle}>
+      Today's Outfit
+    </Text>
+  </View>
 
   {currentOutfit && (
     <Pressable
+      style={styles.editButton}
       onPress={() =>
         navigation
           .getParent()
@@ -269,6 +290,12 @@ const accessoryRecommendations =
           )
       }
     >
+      <Ionicons
+        name="pencil-outline"
+        size={15}
+        color={colors.accent}
+      />
+
       <Text style={styles.editText}>
         Edit
       </Text>
@@ -294,29 +321,41 @@ const accessoryRecommendations =
   </View>
 ) : (
   <Pressable
-    style={styles.emptyOutfitCard}
-    onPress={() =>
-      navigation.navigate(
-        "Create Outfit"
-      )
-    }
-  >
-    <Text
-      style={
-        styles.emptyOutfitTitle
-      }
-    >
-      Create today's outfit
+  style={styles.emptyOutfitCard}
+  onPress={() =>
+    navigation.navigate(
+      "Create Outfit"
+    )
+  }
+>
+  <View style={styles.emptyOutfitIcon}>
+    <Ionicons
+      name="color-wand-outline"
+      size={24}
+      color={colors.accent}
+    />
+  </View>
+
+  <Text style={styles.emptyOutfitTitle}>
+    Create today's outfit
+  </Text>
+
+  <Text style={styles.emptyOutfitSubtitle}>
+    Build a look from your closet
+  </Text>
+
+  <View style={styles.emptyOutfitAction}>
+    <Text style={styles.emptyOutfitActionText}>
+      Start styling
     </Text>
 
-    <Text
-      style={
-        styles.emptyOutfitSubtitle
-      }
-    >
-      Build a look from your closet
-    </Text>
-  </Pressable>
+    <Ionicons
+      name="arrow-forward"
+      size={16}
+      color={colors.accent}
+    />
+  </View>
+</Pressable>
 )}
 
        {/* SUGGESTED ACCESSORIES */}
@@ -324,9 +363,15 @@ const accessoryRecommendations =
 {accessoryRecommendations.length >
   0 && (
   <>
-    <Text style={styles.sectionTitle}>
-      Suggested Accessories
-    </Text>
+ <View style={styles.accessoryHeading}>
+  <Text style={styles.sectionEyebrow}>
+    COMPLETE THE LOOK
+  </Text>
+
+  <Text style={styles.sectionTitle}>
+    Suggested for you
+  </Text>
+</View>
 
     <ScrollView
       horizontal
@@ -387,13 +432,13 @@ const accessoryRecommendations =
                   "Accessory"}
               </Text>
 
-              <Text
-                style={
-                  styles.accessoryAddText
-                }
-              >
-                + Add
-              </Text>
+              <View style={styles.accessoryAddButton}>
+                <Ionicons
+                  name="add"
+                  size={17}
+                  color="#FFFFFF"
+                />
+              </View>
             </Pressable>
           );
         }
@@ -403,31 +448,39 @@ const accessoryRecommendations =
 )}
 
         {/* CLOSET */}
+      <Pressable
+  style={({ pressed }) => [
+    styles.closetButton,
+    pressed && styles.buttonPressed,
+  ]}
+  onPress={() =>
+    navigation.navigate("Closet")
+  }
+>
+  <View>
+    <Text style={styles.closetLabel}>
+      MY WARDROBE
+    </Text>
 
-        <Pressable
-          style={styles.closetButton}
-        >
-          <View>
-            <Text
-              style={
-                styles.closetButtonText
-              }
-            >
-              My Closet
-            </Text>
+    <Text style={styles.closetButtonText}>
+      My Closet
+    </Text>
 
-            <Text
-              style={
-                styles.closetButtonSubtext
-              }
-            >
-              Browse your wardrobe
-            </Text>
+    <Text style={styles.closetButtonSubtext}>
+      {clothingItems.length}{" "}
+      {clothingItems.length === 1
+        ? "piece"
+        : "pieces"}
+    </Text>
+  </View>
+
+  <View style={styles.closetArrow}>
+    <Ionicons
+      name="arrow-forward"
+      size={20}
+      color="#FFFFFF"
+    />
           </View>
-
-          <Text style={styles.arrow}>
-            ›
-          </Text>
         </Pressable>
       </ScrollView>
     </SafeScreen>
@@ -437,377 +490,335 @@ const accessoryRecommendations =
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor:
-      colors.background,
+    backgroundColor: colors.background,
   },
 
   content: {
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingTop: 26,
+    paddingBottom: 44,
   },
 
   /* HEADER */
 
   header: {
     flexDirection: "row",
-    justifyContent:
-      "space-between",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 24,
   },
 
   greeting: {
-    fontSize: 15,
-    color:
-      colors.secondaryText,
+    fontFamily: typography.bold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: colors.secondaryText,
+    marginBottom: 3,
   },
 
   name: {
-    fontSize: 28,
-    fontWeight: "700",
+    fontFamily: typography.extraBold,
+    fontSize: 34,
+    letterSpacing: -1.2,
     color: colors.text,
   },
 
   profileButton: {
     width: 46,
     height: 46,
-
-    borderRadius: 23,
-
-    backgroundColor:
-      colors.accentLight,
-
+    borderRadius: 16,
+    backgroundColor: colors.accentLight,
     justifyContent: "center",
     alignItems: "center",
   },
 
   profileInitial: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontFamily: typography.bold,
+    fontSize: 17,
     color: colors.accent,
   },
 
   /* WEATHER */
 
   weatherCard: {
-    backgroundColor:
-      colors.accentLight,
-
-    borderRadius: 22,
-
-    padding: 20,
-
-    marginBottom: 28,
+    backgroundColor: colors.accent,
+    borderRadius: 24,
+    padding: 22,
+    marginBottom: 34,
   },
 
   weatherTopRow: {
     flexDirection: "row",
-
-    justifyContent:
-      "space-between",
-
+    justifyContent: "space-between",
     alignItems: "flex-start",
   },
 
+  weatherLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+
   sectionLabel: {
-    fontSize: 11,
-
-    fontWeight: "700",
-
-    letterSpacing: 1,
-
-    color:
-      colors.secondaryText,
-
-    marginBottom: 5,
+    fontFamily: typography.bold,
+    fontSize: 10,
+    letterSpacing: 1.3,
+    color: "rgba(255,255,255,0.72)",
   },
 
   temperature: {
-    fontSize: 36,
-
-    fontWeight: "700",
-
-    color: colors.text,
+    fontFamily: typography.extraBold,
+    fontSize: 50,
+    letterSpacing: -2,
+    color: "#FFFFFF",
+    marginTop: 8,
   },
 
   weatherDescription: {
-    marginTop: 6,
-
-    fontSize: 15,
-
-    color:
-      colors.secondaryText,
+    fontFamily: typography.medium,
+    marginTop: 2,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.76)",
   },
 
   weatherCategoryBadge: {
-    backgroundColor:
-      colors.surface,
-
-    borderRadius: 18,
-
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
-
-    borderWidth: 1,
-
-    borderColor:
-      colors.border,
   },
 
   weatherCategoryText: {
+    fontFamily: typography.bold,
     fontSize: 13,
-
-    fontWeight: "700",
-
-    color: colors.text,
+    color: "#FFFFFF",
   },
 
   weatherStatusText: {
-    fontSize: 15,
-
-    color:
-      colors.secondaryText,
-  },
-
-  weatherNotice: {
-    marginTop: 16,
-
-    padding: 14,
-
-    borderRadius: 16,
-
-    backgroundColor:
-      colors.surface,
-  },
-
-  weatherNoticeTitle: {
+    fontFamily: typography.medium,
     fontSize: 14,
-
-    fontWeight: "700",
-
-    color: colors.text,
+    color: "#FFFFFF",
   },
 
-  weatherNoticeText: {
-    fontSize: 13,
+  weatherDetails: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 22,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.15)",
+  },
 
-    lineHeight: 18,
+  weatherDetail: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
 
-    color:
-      colors.secondaryText,
+  weatherDetailText: {
+    fontFamily: typography.medium,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.82)",
+  },
 
-    marginTop: 4,
+  weatherDetailDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    marginHorizontal: 16,
   },
 
   /* SECTION HEADERS */
 
   sectionHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: 14,
+  },
 
-    justifyContent:
-      "space-between",
-
-    alignItems: "center",
+  sectionEyebrow: {
+    fontFamily: typography.bold,
+    fontSize: 10,
+    letterSpacing: 1.3,
+    color: colors.accent,
+    marginBottom: 4,
   },
 
   sectionTitle: {
-    fontSize: 20,
-
-    fontWeight: "700",
-
+    fontFamily: typography.bold,
+    fontSize: 21,
+    letterSpacing: -0.5,
     color: colors.text,
+  },
 
-    marginBottom: 14,
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: colors.accentLight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
 
   editText: {
+    fontFamily: typography.semibold,
+    fontSize: 12,
     color: colors.accent,
-
-    fontWeight: "600",
-
-    marginBottom: 14,
   },
 
   /* OUTFIT */
-outfitPreview: {
-  width: "100%",
 
-  height: 390,
+  outfitPreview: {
+    width: "100%",
+    height: 380,
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    marginBottom: 34,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
 
-  marginBottom: 30,
+  outfitPreviewImage: {
+    width: "100%",
+    height: "100%",
+  },
 
-  justifyContent: "center",
-  alignItems: "center",
-},
+  emptyOutfitCard: {
+    minHeight: 220,
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    marginBottom: 34,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
 
-outfitPreviewImage: {
-  width: "100%",
-  height: "100%",
-},
+  emptyOutfitIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: colors.accentLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+  },
 
-emptyOutfitCard: {
-  minHeight: 180,
+  emptyOutfitTitle: {
+    fontFamily: typography.bold,
+    fontSize: 18,
+    letterSpacing: -0.3,
+    color: colors.text,
+  },
 
-  backgroundColor:
-    colors.surface,
+  emptyOutfitSubtitle: {
+    fontFamily: typography.regular,
+    marginTop: 5,
+    fontSize: 13,
+    color: colors.secondaryText,
+  },
 
-  borderRadius: 24,
+  emptyOutfitAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 18,
+  },
 
-  marginBottom: 30,
+  emptyOutfitActionText: {
+    fontFamily: typography.semibold,
+    fontSize: 13,
+    color: colors.accent,
+  },
 
-  justifyContent: "center",
-  alignItems: "center",
-
-  paddingHorizontal: 24,
-
-  borderWidth: 1,
-  borderColor:
-    colors.border,
-},
-
-emptyOutfitTitle: {
-  fontSize: 17,
-
-  fontWeight: "700",
-
-  color: colors.text,
-},
-
-emptyOutfitSubtitle: {
-  marginTop: 6,
-
-  fontSize: 13,
-
-  color:
-    colors.secondaryText,
-},
   /* ACCESSORIES */
 
+  accessoryHeading: {
+    marginBottom: 14,
+  },
+
   accessoriesContainer: {
-    marginBottom: 28,
+    marginBottom: 34,
   },
 
   accessoryCard: {
-  width: 120,
+    width: 124,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    marginRight: 12,
+    padding: 10,
+  },
 
-  backgroundColor:
-    colors.surface,
-
-  borderRadius: 20,
-
-  marginRight: 12,
-
-  paddingTop: 10,
-  paddingHorizontal: 10,
-  paddingBottom: 12,
-
-  alignItems: "center",
-
-  borderWidth: 1,
-
-  borderColor:
-    colors.border,
-},
+  accessoryImage: {
+    width: "100%",
+    height: 100,
+    marginBottom: 8,
+  },
 
   accessoryName: {
+    fontFamily: typography.semibold,
     fontSize: 12,
-
-    fontWeight: "600",
-
     color: colors.text,
-
-    textAlign: "center"
+    textAlign: "center",
   },
-  savedOutfitCard: {
-  width: "100%",
 
-  aspectRatio: 1,
-
-  backgroundColor:
-    colors.surface,
-
-  borderRadius: 22,
-
-  marginBottom: 28,
-
-  borderWidth: 1,
-
-  borderColor:
-    colors.border,
-
-  overflow: "hidden",
-},
-
-savedOutfitImage: {
-  width: "100%",
-  height: "100%",
-},
-
-emptyOutfitText: {
-  color:
-    colors.secondaryText,
-
-  textAlign: "center",
-
-  paddingVertical: 30,
-},
-
-accessoryImage: {
-  width: 88,
-  height: 88,
-
-  marginBottom: 4,
-},
-
-accessoryAddText: {
-  color: colors.accent,
-
-  fontSize: 12,
-
-  fontWeight: "700",
-
-  marginTop: 5,
-},
+  accessoryAddButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    marginTop: 9,
+  },
 
   /* CLOSET */
 
   closetButton: {
-    backgroundColor:
-      colors.accent,
-
-    paddingVertical: 18,
+    backgroundColor: colors.accent,
+    paddingVertical: 20,
     paddingHorizontal: 20,
-
     borderRadius: 20,
-
     flexDirection: "row",
-
-    justifyContent:
-      "space-between",
-
+    justifyContent: "space-between",
     alignItems: "center",
   },
 
+  closetLabel: {
+    fontFamily: typography.bold,
+    fontSize: 9,
+    letterSpacing: 1.3,
+    color: "rgba(255,255,255,0.62)",
+    marginBottom: 4,
+  },
+
   closetButtonText: {
+    fontFamily: typography.bold,
     color: "#FFFFFF",
-
-    fontSize: 18,
-
-    fontWeight: "700",
+    fontSize: 19,
+    letterSpacing: -0.3,
   },
 
   closetButtonSubtext: {
-    color: "#F5EDE9",
-
-    fontSize: 13,
-
+    fontFamily: typography.regular,
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 12,
     marginTop: 3,
   },
 
-  arrow: {
-    color: "#FFFFFF",
+  closetArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-    fontSize: 32,
+  buttonPressed: {
+    opacity: 0.82,
   },
 });

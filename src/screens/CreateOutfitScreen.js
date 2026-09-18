@@ -13,7 +13,11 @@ import {
 } from "react-native";
 
 import { useCloset } from "../context/ClosetContext";
+
+import { Ionicons } from "@expo/vector-icons";
+
 import { colors } from "../constants/colors";
+import { typography } from "../constants/typography";
 import SafeScreen from "../components/SafeScreen";
 import { useWeather, } from"../context/WeatherContext";
 
@@ -41,7 +45,7 @@ function getWeatherRecommendations(weather) {
     recommendations.push({
       id: "rain",
 
-      icon: "☔",
+      icon: "umbrella-outline",
 
       title: "Rain expected",
 
@@ -60,7 +64,7 @@ function getWeatherRecommendations(weather) {
     recommendations.push({
       id: "cold",
 
-      icon: "🧥",
+      icon: "snow-outline",
 
       title: "Bundle up",
 
@@ -78,7 +82,7 @@ function getWeatherRecommendations(weather) {
     recommendations.push({
       id: "hot",
 
-      icon: "☀️",
+      icon: "sunny-outline",
 
       title: "Dress light",
 
@@ -93,7 +97,7 @@ function getWeatherRecommendations(weather) {
     recommendations.push({
       id: "uv",
 
-      icon: "🕶️",
+      icon: "sunny",
 
       title: "High UV",
 
@@ -108,7 +112,7 @@ function getWeatherRecommendations(weather) {
     recommendations.push({
       id: "wind",
 
-      icon: "💨",
+      icon: "leaf-outline",
 
       title: "It's windy",
 
@@ -127,7 +131,7 @@ function getWeatherRecommendations(weather) {
     recommendations.push({
       id: "temperature-drop",
 
-      icon: "🌙",
+      icon: "moon-outline",
 
       title: "It gets cooler later",
 
@@ -282,9 +286,17 @@ export default function CreateOutfitScreen({
     <>
       <View style={styles.weatherTopRow}>
         <View>
-          <Text style={styles.weatherLabel}>
-            TODAY'S WEATHER
-          </Text>
+          <View style={styles.weatherLabelRow}>
+            <Ionicons
+            name="location-outline"
+            size={14}
+            color="rgba(255,255,255,0.72)"
+            />
+
+            <Text style={styles.weatherLabel}>
+              TODAY
+            </Text>
+          </View>
 
           <Text style={styles.temperature}>
             {currentWeather.temperature}°F
@@ -314,67 +326,6 @@ export default function CreateOutfitScreen({
         {currentWeather.feelsLike}°F
       </Text>
 
-      {/* WEATHER ALERTS */}
-
-      {weatherRecommendations.length >
-        0 && (
-        <View
-          style={
-            styles.weatherAlertsContainer
-          }
-        >
-          {weatherRecommendations
-            .slice(0, 2)
-            .map(
-              (recommendation) => (
-                <View
-                  key={
-                    recommendation.id
-                  }
-                  style={
-                    styles.rainAlert
-                  }
-                >
-                  <Text
-                    style={
-                      styles.rainAlertIcon
-                    }
-                  >
-                    {
-                      recommendation.icon
-                    }
-                  </Text>
-
-                  <View
-                    style={
-                      styles.rainAlertTextContainer
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.rainAlertTitle
-                      }
-                    >
-                      {
-                        recommendation.title
-                      }
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.rainAlertText
-                      }
-                    >
-                      {
-                        recommendation.message
-                      }
-                    </Text>
-                  </View>
-                </View>
-              )
-            )}
-        </View>
-      )}
     </>
 
   ) : null}
@@ -383,33 +334,25 @@ export default function CreateOutfitScreen({
         {/* WEATHER QUESTION */}
 
         <View style={styles.section}>
-          <Text
-            style={
-              styles.questionNumber
-            }
-          >
-            Weather
-          </Text>
+          <View style={styles.sectionHeadingRow}>
+              <View style={styles.sectionIcon}>
+                <Ionicons
+                name="partly-sunny-outline"
+                size={19}
+                color={colors.accent}
+              />
+            </View>
 
-          <Text
-            style={
-              styles.questionTitle
-            }
-          >
-            What weather are you
-            dressing for?
-          </Text>
+  <View style={styles.sectionHeadingText}>
+    <Text style={styles.questionTitle}>
+      Weather
+    </Text>
 
-          <Text
-            style={
-              styles.questionDescription
-            }
-          >
-            We've selected today's
-            weather automatically, but
-            you can change it if you're
-            planning ahead.
-          </Text>
+    <Text style={styles.questionDescription}>
+      Today's forecast is selected automatically.
+    </Text>
+  </View>
+</View>
 
           <View
             style={
@@ -462,32 +405,25 @@ export default function CreateOutfitScreen({
         {/* OCCASION QUESTION */}
 
         <View style={styles.section}>
-          <Text
-            style={
-              styles.questionNumber
-            }
-          >
-            Occasion
-          </Text>
+          <View style={styles.sectionHeadingRow}>
+  <View style={styles.sectionIcon}>
+    <Ionicons
+      name="sparkles-outline"
+      size={19}
+      color={colors.accent}
+    />
+  </View>
 
-          <Text
-            style={
-              styles.questionTitle
-            }
-          >
-            What are you dressing for?
-          </Text>
+  <View style={styles.sectionHeadingText}>
+    <Text style={styles.questionTitle}>
+      Occasion
+    </Text>
 
-          <Text
-            style={
-              styles.questionDescription
-            }
-          >
-            Choose one or more occasions.
-            We'll use them to help filter
-            your closet while you build
-            your outfit.
-          </Text>
+    <Text style={styles.questionDescription}>
+      Pick one or more.
+    </Text>
+  </View>
+</View>
 
           <View
             style={
@@ -598,13 +534,13 @@ export default function CreateOutfitScreen({
             styles.reminderItem
           }
         >
-          <Text
-            style={
-              styles.reminderIcon
-            }
-          >
-            {recommendation.icon}
-          </Text>
+          <View style={styles.reminderIconContainer}>
+            <Ionicons
+              name={recommendation.icon}
+              size={20}
+              color={colors.accent}
+            />
+        </View>
 
           <View
             style={
@@ -653,13 +589,17 @@ export default function CreateOutfitScreen({
           }
           onPress={buildOutfit}
         >
-          <Text
-            style={
-              styles.buildButtonText
-            }
-          >
-            Build My Outfit
-          </Text>
+          <View style={styles.buildButtonContent}>
+  <Text style={styles.buildButtonText}>
+    Build My Outfit
+  </Text>
+
+  <Ionicons
+    name="arrow-forward"
+    size={20}
+    color="#FFFFFF"
+  />
+</View>
         </Pressable>
       </ScrollView>
     </SafeScreen>
@@ -673,292 +613,164 @@ export default function CreateOutfitScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor:
-      colors.background,
+    backgroundColor: colors.background,
   },
 
   content: {
     paddingHorizontal: 20,
-    paddingTop: 28,
+    paddingTop: 30,
     paddingBottom: 50,
   },
 
+  /* HEADER */
+
   title: {
-    fontSize: 30,
-    fontWeight: "700",
+    fontFamily: typography.extraBold,
+    fontSize: 34,
+    letterSpacing: -1.2,
     color: colors.text,
   },
 
   subtitle: {
+    fontFamily: typography.regular,
     fontSize: 15,
-
-    color:
-      colors.secondaryText,
-
-    marginTop: 6,
-
-    lineHeight: 21,
+    lineHeight: 22,
+    color: colors.secondaryText,
+    marginTop: 5,
+    maxWidth: 320,
   },
-  weatherAlertsContainer: {
-  marginTop: 18,
-  gap: 10,
-},
 
-reminderSubtitle: {
-  fontSize: 13,
-
-  lineHeight: 19,
-
-  color:
-    colors.secondaryText,
-
-  marginTop: 5,
-
-  marginBottom: 6,
-},
-
-reminderItem: {
-  flexDirection: "row",
-
-  alignItems: "flex-start",
-
-  marginTop: 14,
-},
-
-reminderIcon: {
-  fontSize: 22,
-
-  marginRight: 12,
-},
-
-reminderItemText: {
-  flex: 1,
-},
-
-reminderItemTitle: {
-  fontSize: 14,
-
-  fontWeight: "700",
-
-  color: colors.text,
-
-  marginBottom: 3,
-},
-
-  /* WEATHER */
+  /* WEATHER HERO */
 
   weatherCard: {
     marginTop: 26,
-
-    backgroundColor:
-      colors.surface,
-
-    borderWidth: 1,
-    borderColor:
-      colors.border,
-
-    borderRadius: 26,
-
-    padding: 20,
+    backgroundColor: colors.accent,
+    borderRadius: 24,
+    padding: 22,
   },
 
   weatherTopRow: {
     flexDirection: "row",
-
     alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
 
-    justifyContent:
-      "space-between",
+  weatherLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
   },
 
   weatherLabel: {
-    fontSize: 12,
-
-    fontWeight: "700",
-
-    color:
-      colors.secondaryText,
-
-    letterSpacing: 0.8,
+    fontFamily: typography.bold,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.72)",
+    letterSpacing: 1.2,
   },
 
   temperature: {
-    fontSize: 38,
-
-    fontWeight: "700",
-
-    color: colors.text,
-
-    marginTop: 4,
+    fontFamily: typography.extraBold,
+    fontSize: 52,
+    letterSpacing: -2,
+    color: "#FFFFFF",
+    marginTop: 8,
   },
 
   weatherCategoryBadge: {
-    backgroundColor:
-      colors.background,
-
-    borderWidth: 1,
-
-    borderColor:
-      colors.border,
-
-    borderRadius: 18,
-
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderRadius: 20,
     paddingHorizontal: 14,
-
     paddingVertical: 8,
   },
 
   weatherCategoryText: {
+    fontFamily: typography.bold,
     fontSize: 13,
-
-    fontWeight: "700",
-
-    color: colors.text,
+    color: "#FFFFFF",
   },
 
   weatherCondition: {
-    marginTop: 4,
-
-    fontSize: 15,
-
-    color:
-      colors.secondaryText,
+    fontFamily: typography.medium,
+    marginTop: 3,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.76)",
   },
 
-  rainAlert: {
+  /* SECTIONS */
+
+  section: {
+    marginTop: 30,
+  },
+
+  sectionHeadingRow: {
     flexDirection: "row",
-
-    marginTop: 18,
-
-    padding: 14,
-
-    borderRadius: 18,
-
-    backgroundColor:
-      colors.background,
+    alignItems: "center",
+    marginBottom: 18,
   },
 
-  rainAlertIcon: {
-    fontSize: 24,
-
+  sectionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: colors.accentLight,
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
 
-  rainAlertTextContainer: {
+  sectionHeadingText: {
     flex: 1,
   },
 
-  rainAlertTitle: {
-    fontSize: 14,
-
-    fontWeight: "700",
-
-    color: colors.text,
-  },
-
-  rainAlertText: {
-    fontSize: 13,
-
-    lineHeight: 18,
-
-    color:
-      colors.secondaryText,
-
-    marginTop: 3,
-  },
-
-  /* QUESTIONS */
-
-  section: {
-    marginTop: 24,
-
-    backgroundColor:
-      colors.surface,
-
-    borderWidth: 1,
-
-    borderColor:
-      colors.border,
-
-    borderRadius: 26,
-
-    padding: 20,
-  },
-
   questionNumber: {
-    fontSize: 12,
-
-    fontWeight: "700",
-
+    fontFamily: typography.bold,
+    fontSize: 11,
     color: colors.accent,
-
-    textTransform:
-      "uppercase",
-
-    letterSpacing: 0.8,
-
-    marginBottom: 7,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
   },
 
   questionTitle: {
-    fontSize: 22,
-
-    fontWeight: "700",
-
+    fontFamily: typography.bold,
+    fontSize: 20,
+    letterSpacing: -0.4,
     color: colors.text,
   },
 
   questionDescription: {
-    fontSize: 14,
-
-    lineHeight: 20,
-
-    color:
-      colors.secondaryText,
-
-    marginTop: 7,
+    fontFamily: typography.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.secondaryText,
+    marginTop: 2,
   },
+
+  /* OPTIONS */
 
   optionContainer: {
     flexDirection: "row",
-
     flexWrap: "wrap",
-
     gap: 10,
-
-    marginTop: 22,
   },
 
   optionButton: {
-    backgroundColor:
-      colors.background,
-
+    backgroundColor: colors.surface,
     borderWidth: 1,
-
-    borderColor:
-      colors.border,
-
-    borderRadius: 20,
-
-    paddingHorizontal: 16,
-
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 17,
     paddingVertical: 12,
   },
 
   optionButtonSelected: {
-    backgroundColor:
-      colors.accent,
-
-    borderColor:
-      colors.accent,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
 
   optionText: {
+    fontFamily: typography.semibold,
     color: colors.text,
-
     fontSize: 14,
-
-    fontWeight: "600",
   },
 
   optionTextSelected: {
@@ -968,89 +780,112 @@ reminderItemTitle: {
   /* SUMMARY */
 
   selectionSummary: {
-    marginTop: 20,
-
-    paddingHorizontal: 4,
+    marginTop: 22,
+    backgroundColor: colors.accentLight,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
   },
 
   selectionLabel: {
-    color:
-      colors.secondaryText,
-
-    fontSize: 12,
-
-    marginBottom: 5,
+    fontFamily: typography.bold,
+    color: colors.accent,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
 
   selectionText: {
+    fontFamily: typography.semibold,
     color: colors.text,
-
-    fontSize: 14,
-
-    fontWeight: "600",
+    fontSize: 13,
+    lineHeight: 19,
   },
 
-  /* REMINDER */
+  /* REMINDERS */
 
   reminderCard: {
-    marginTop: 20,
-
-    backgroundColor:
-      colors.surface,
-
-    borderWidth: 1,
-
-    borderColor:
-      colors.border,
-
-    borderRadius: 22,
-
-    padding: 18,
+    marginTop: 32,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 20,
   },
 
   reminderTitle: {
-    fontSize: 16,
-
-    fontWeight: "700",
-
+    fontFamily: typography.bold,
+    fontSize: 19,
+    letterSpacing: -0.3,
     color: colors.text,
   },
 
-  reminderText: {
-    fontSize: 14,
-
-    lineHeight: 20,
-
-    color:
-      colors.secondaryText,
-
-    marginTop: 7,
+  reminderSubtitle: {
+    fontFamily: typography.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.secondaryText,
+    marginTop: 4,
+    marginBottom: 4,
   },
 
-  /* BUTTON */
+  reminderItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 18,
+  },
+
+  reminderIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.accentLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+
+  reminderItemText: {
+    flex: 1,
+  },
+
+  reminderItemTitle: {
+    fontFamily: typography.bold,
+    fontSize: 14,
+    color: colors.text,
+    marginBottom: 3,
+  },
+
+  reminderText: {
+    fontFamily: typography.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.secondaryText,
+  },
+
+  /* BUILD BUTTON */
 
   buildButton: {
-    backgroundColor:
-      colors.accent,
-
-    borderRadius: 22,
-
+    backgroundColor: colors.accent,
+    borderRadius: 16,
     paddingVertical: 17,
-
-    alignItems: "center",
-
+    paddingHorizontal: 20,
     marginTop: 28,
   },
 
   buildButtonDisabled: {
-    opacity: 0.4,
+    opacity: 0.35,
+  },
+
+  buildButtonContent: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 9,
   },
 
   buildButtonText: {
+    fontFamily: typography.bold,
     color: "#FFFFFF",
-
     fontSize: 16,
-
-    fontWeight: "700",
   },
 });

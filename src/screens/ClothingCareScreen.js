@@ -13,8 +13,10 @@ import {
   View,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
 import SafeScreen from "../components/SafeScreen";
 import { colors } from "../constants/colors";
+import { typography } from "../constants/typography";
 import { useCloset } from "../context/ClosetContext";
 
 const MATERIAL_OPTIONS = [
@@ -471,24 +473,42 @@ export default function ClothingCareScreen() {
         }
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.pageHeader}>
+            <Text style={styles.eyebrow}>
+                WARDROBE CARE
+            </Text>
+
         <Text style={styles.title}>
-          Clothing Care
+            Clothing Care
         </Text>
 
-        <Text
-          style={styles.subtitle}
-        >
-          Select an item and add its
-          material composition.
+        <Text style={styles.subtitle}>
+        Add material composition to get
+        general care guidance for your pieces.
         </Text>
+    </View>
 
         {/* CLOTHING ITEM */}
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          SELECT AN ITEM
-        </Text>
+        <View style={styles.sectionHeading}>
+  <View style={styles.sectionIcon}>
+    <Ionicons
+      name="shirt-outline"
+      size={18}
+      color={colors.accent}
+    />
+  </View>
+
+  <View>
+    <Text style={styles.sectionTitle}>
+      Choose a piece
+    </Text>
+
+    <Text style={styles.sectionSubtitle}>
+      Select an item from your closet
+    </Text>
+  </View>
+</View>
 
         <ScrollView
           horizontal
@@ -499,6 +519,46 @@ export default function ClothingCareScreen() {
             styles.itemRow
           }
         >
+            {selectedItem && (
+  <View style={styles.selectedItemSummary}>
+    <Image
+      source={{
+        uri:
+          selectedItem.processedImageUri ||
+          selectedItem.imageUri,
+      }}
+      style={styles.selectedItemImage}
+      resizeMode="contain"
+    />
+
+    <View style={styles.selectedItemInfo}>
+      <Text style={styles.selectedItemLabel}>
+        SELECTED PIECE
+      </Text>
+
+      <Text
+        style={styles.selectedItemName}
+        numberOfLines={1}
+      >
+        {selectedItem.name ||
+          selectedItem.category}
+      </Text>
+
+      <Text style={styles.selectedItemCategory}>
+        {selectedItem.category}
+        {selectedItem.subCategory
+          ? ` · ${selectedItem.subCategory}`
+          : ""}
+      </Text>
+    </View>
+
+    <Ionicons
+      name="checkmark-circle"
+      size={23}
+      color={colors.accent}
+    />
+  </View>
+)}
           {clothingItems.map(
             (item) => {
               const isSelected =
@@ -531,6 +591,16 @@ export default function ClothingCareScreen() {
                     }
                     resizeMode="contain"
                   />
+                {isSelected && (
+                    <View style={styles.selectedBadge}>
+                    <Ionicons
+                    name="checkmark"
+                    size={13}
+                    color="#FFFFFF"
+                />
+            </View>
+        )}
+
 
                   <Text
                     style={
@@ -553,13 +623,25 @@ export default function ClothingCareScreen() {
           <>
             {/* MATERIALS */}
 
-            <Text
-              style={
-                styles.sectionTitle
-              }
-            >
-              MATERIAL COMPOSITION
+            <View style={styles.sectionHeading}>
+                <View style={styles.sectionIcon}>
+                    <Ionicons
+                    name="layers-outline"
+                    size={18}
+                    color={colors.accent}
+                />
+        </View>
+
+            <View style={styles.sectionHeadingText}>
+                <Text style={styles.sectionTitle}>
+                    Material Composition
+                </Text>
+
+            <Text style={styles.sectionSubtitle}>
+                Select fibers and enter percentages
             </Text>
+        </View>
+    </View>
 
             <View
               style={
@@ -596,15 +678,13 @@ export default function ClothingCareScreen() {
                           )
                         }
                       >
-                        {isSelected && (
-                          <Text
-                            style={
-                              styles.checkmark
-                            }
-                          >
-                            ✓
-                          </Text>
-                        )}
+                       {isSelected && (
+                         <Ionicons
+                            name="checkmark"
+                            size={15}
+                            color="#FFFFFF"
+                        />
+                    )}
                       </Pressable>
 
                       <Pressable
@@ -671,132 +751,240 @@ export default function ClothingCareScreen() {
                 }
               )}
 
-              <View
-                style={
-                  styles.totalRow
-                }
-              >
-                <Text
-                  style={
-                    styles.totalLabel
-                  }
-                >
-                  Total
-                </Text>
+             <View>
+  <Text style={styles.totalLabel}>
+    TOTAL COMPOSITION
+  </Text>
 
-                <Text
-                  style={[
-                    styles.totalValue,
+  <Text style={styles.totalHint}>
+    Percentages must equal 100%
+  </Text>
+</View>
 
-                    totalPercentage ===
-                      100 &&
-                      styles.totalComplete,
-                  ]}
-                >
-                  {totalPercentage}%
-                  {totalPercentage ===
-                  100
-                    ? " ✓"
-                    : ""}
-                </Text>
-              </View>
-            </View>
-
-            {/* CARE GUIDE */}
-
-            <Text
-              style={
-                styles.sectionTitle
-              }
-            >
-              CARE GUIDE
-            </Text>
-
-        <View style={styles.careCard}>
-                {careGuide ? (
-                    <>
-      <Text style={styles.careBasedOn}>
-        Material-Base Care Guide
-      </Text>
-
-      <View style={styles.careSection}>
-        <Text style={styles.careHeading}>
-          Washing
-        </Text>
-
-        <Text style={styles.careText}>
-          {careGuide.washing}
-        </Text>
-      </View>
-
-      <View style={styles.careSection}>
-        <Text style={styles.careHeading}>
-          Drying
-        </Text>
-
-        <Text style={styles.careText}>
-          {careGuide.drying}
-        </Text>
-      </View>
-
-      <View style={styles.careSection}>
-        <Text style={styles.careHeading}>
-          Ironing
-        </Text>
-
-        <Text style={styles.careText}>
-          {careGuide.ironing}
-        </Text>
-      </View>
-
-      <View style={styles.careSection}>
-        <Text style={styles.careHeading}>
-          Bleaching
-        </Text>
-
-        <Text style={styles.careText}>
-          {careGuide.bleaching}
-        </Text>
-      </View>
-    </>
-  ) : (
-    <Text style={styles.careText}>
-      Select materials and enter their
-      percentages to view general care
-      guidance.
-    </Text>
+<View
+  style={[
+    styles.totalBadge,
+    totalPercentage === 100 &&
+      styles.totalBadgeComplete,
+  ]}
+>
+  {totalPercentage === 100 && (
+    <Ionicons
+      name="checkmark"
+      size={14}
+      color="#FFFFFF"
+    />
   )}
 
-  <View style={styles.notice}>
-    <Text style={styles.noticeTitle}>
-      Check the garment label first
+  <Text
+    style={[
+      styles.totalValue,
+      totalPercentage === 100 &&
+        styles.totalValueComplete,
+    ]}
+  >
+    {totalPercentage}%
+  </Text>
+</View>
+            </View>
+{/* CARE GUIDE */}
+
+<View style={styles.sectionHeading}>
+  <View style={styles.sectionIcon}>
+    <Ionicons
+      name="sparkles-outline"
+      size={18}
+      color={colors.accent}
+    />
+  </View>
+
+  <View style={styles.sectionHeadingText}>
+    <Text style={styles.sectionTitle}>
+      Care Guide
     </Text>
 
-    <Text style={styles.noticeText}>
-      Material composition alone cannot
-      determine a garment's exact care
-      requirements. Always follow the
-      manufacturer's care label when it
-      differs from this guidance.
+    <Text style={styles.sectionSubtitle}>
+      Based on material composition
     </Text>
   </View>
 </View>
 
+<View style={styles.careCard}>
+  {careGuide ? (
+    <>
+      <View style={styles.careGuideHeader}>
+        <View>
+          <Text style={styles.careEyebrow}>
+            MATERIAL-BASED
+          </Text>
+
+          <Text style={styles.careGuideTitle}>
+            Care guidance
+          </Text>
+        </View>
+
+        <View style={styles.careGuideIcon}>
+          <Ionicons
+            name="leaf-outline"
+            size={21}
+            color="#FFFFFF"
+          />
+        </View>
+      </View>
+
+      <View style={styles.careList}>
+        <View style={styles.careRow}>
+          <View style={styles.careIcon}>
+            <Ionicons
+              name="water-outline"
+              size={19}
+              color={colors.accent}
+            />
+          </View>
+
+          <View style={styles.careContent}>
+            <Text style={styles.careHeading}>
+              Washing
+            </Text>
+
+            <Text style={styles.careText}>
+              {careGuide.washing}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.careDivider} />
+
+        <View style={styles.careRow}>
+          <View style={styles.careIcon}>
+            <Ionicons
+              name="refresh-outline"
+              size={19}
+              color={colors.accent}
+            />
+          </View>
+
+          <View style={styles.careContent}>
+            <Text style={styles.careHeading}>
+              Drying
+            </Text>
+
+            <Text style={styles.careText}>
+              {careGuide.drying}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.careDivider} />
+
+        <View style={styles.careRow}>
+          <View style={styles.careIcon}>
+            <Ionicons
+              name="thermometer-outline"
+              size={19}
+              color={colors.accent}
+            />
+          </View>
+
+          <View style={styles.careContent}>
+            <Text style={styles.careHeading}>
+              Ironing
+            </Text>
+
+            <Text style={styles.careText}>
+              {careGuide.ironing}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.careDivider} />
+
+        <View style={styles.careRow}>
+          <View style={styles.careIcon}>
+            <Ionicons
+              name="flask-outline"
+              size={19}
+              color={colors.accent}
+            />
+          </View>
+
+          <View style={styles.careContent}>
+            <Text style={styles.careHeading}>
+              Bleaching
+            </Text>
+
+            <Text style={styles.careText}>
+              {careGuide.bleaching}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </>
+  ) : (
+    <View style={styles.emptyCareGuide}>
+      <View style={styles.emptyCareIcon}>
+        <Ionicons
+          name="leaf-outline"
+          size={22}
+          color={colors.accent}
+        />
+      </View>
+
+      <Text style={styles.emptyCareTitle}>
+        Add the material composition
+      </Text>
+
+      <Text style={styles.emptyCareText}>
+        Your care guidance will appear here
+        as you enter the garment's materials.
+      </Text>
+    </View>
+  )}
+
+  <View style={styles.notice}>
+    <Ionicons
+      name="information-circle-outline"
+      size={20}
+      color={colors.accent}
+    />
+
+    <View style={styles.noticeContent}>
+      <Text style={styles.noticeTitle}>
+        Check the garment label first
+      </Text>
+
+      <Text style={styles.noticeText}>
+        Material composition alone cannot
+        determine exact care requirements.
+        Always follow the manufacturer's
+        care label when it differs from this
+        guidance.
+      </Text>
+    </View>
+  </View>
+</View>
+
             <Pressable
-              style={
-                styles.saveButton
-              }
+              style={[
+                styles.saveButton,
+                totalPercentage !== 100 &&
+                    styles.saveButtonIncomplete,
+                ]}
               onPress={
                 handleSave
               }
             >
-              <Text
-                style={
-                  styles.saveButtonText
-                }
-              >
+             <View style={styles.saveButtonContent}>
+                <Ionicons
+                    name="checkmark-circle-outline"
+                    size={20}
+                    color="#FFFFFF"
+                />
+
+            <Text style={styles.saveButtonText}>
                 Save Materials
-              </Text>
+            </Text>
+        </View>
             </Pressable>
           </>
         )}
@@ -805,280 +993,467 @@ export default function ClothingCareScreen() {
   );
 }
 
-const styles =
-  StyleSheet.create({
-    screen: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
 
-    container: {
-      paddingHorizontal: 20,
-      paddingTop: 28,
-      paddingBottom: 50,
-    },
+  container: {
+    paddingHorizontal: 20,
+    paddingTop: 26,
+    paddingBottom: 50,
+  },
 
-    title: {
-      fontSize: 27,
-      fontWeight: "700",
-      color: colors.text,
-    },
+  /* PAGE HEADER */
 
-    subtitle: {
-      marginTop: 6,
-      marginBottom: 30,
-      fontSize: 14,
-      lineHeight: 20,
-      color:
-        colors.secondaryText,
-    },
+  pageHeader: {
+    marginBottom: 30,
+  },
 
-    sectionTitle: {
-      marginTop: 8,
-      marginBottom: 12,
-      fontSize: 12,
-      fontWeight: "700",
-      letterSpacing: 0.8,
-      color:
-        colors.secondaryText,
-    },
+  eyebrow: {
+    fontFamily: typography.bold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: colors.accent,
+    marginBottom: 3,
+  },
 
-    itemRow: {
-      paddingBottom: 24,
-    },
+  title: {
+    fontFamily: typography.extraBold,
+    fontSize: 34,
+    letterSpacing: -1.2,
+    color: colors.text,
+  },
 
-    itemCard: {
-      width: 105,
-      marginRight: 12,
-      padding: 8,
+  subtitle: {
+    marginTop: 5,
+    fontFamily: typography.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.secondaryText,
+    maxWidth: 330,
+  },
 
-      backgroundColor:
-        colors.surface,
+  /* SECTION HEADINGS */
 
-      borderWidth: 2,
-      borderColor:
-        "transparent",
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+    marginTop: 8,
+  },
 
-      borderRadius: 18,
-    },
+  sectionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: colors.accentLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 11,
+  },
 
-    itemCardSelected: {
-      borderColor:
-        colors.accent,
-    },
+  sectionHeadingText: {
+    flex: 1,
+  },
 
-    itemImage: {
-      width: "100%",
-      height: 90,
-    },
+  sectionTitle: {
+    fontFamily: typography.bold,
+    fontSize: 18,
+    letterSpacing: -0.3,
+    color: colors.text,
+  },
 
-    itemName: {
-      marginTop: 7,
-      fontSize: 12,
-      fontWeight: "600",
-      textAlign: "center",
-      color: colors.text,
-    },
+  sectionSubtitle: {
+    fontFamily: typography.regular,
+    fontSize: 12,
+    color: colors.secondaryText,
+    marginTop: 2,
+  },
 
-    materialCard: {
-      paddingHorizontal: 16,
-      paddingVertical: 6,
-      marginBottom: 26,
+  /* ITEM PICKER */
 
-      backgroundColor:
-        colors.surface,
+  itemRow: {
+    paddingBottom: 22,
+  },
 
-      borderWidth: 1,
-      borderColor:
-        colors.border,
+  itemCard: {
+    width: 112,
+    marginRight: 11,
+    padding: 9,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: "transparent",
+    borderRadius: 18,
+    position: "relative",
+  },
 
-      borderRadius: 20,
-    },
+  itemCardSelected: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+  },
 
-    materialRow: {
-      minHeight: 58,
-      flexDirection: "row",
-      alignItems: "center",
+  itemImage: {
+    width: "100%",
+    height: 94,
+  },
 
-      borderBottomWidth: 1,
-      borderBottomColor:
-        colors.border,
-    },
+  itemName: {
+    marginTop: 7,
+    fontFamily: typography.semibold,
+    fontSize: 11,
+    textAlign: "center",
+    color: colors.text,
+  },
 
-    checkbox: {
-      width: 24,
-      height: 24,
-      borderRadius: 7,
+  selectedBadge: {
+    position: "absolute",
+    top: 7,
+    right: 7,
+    width: 23,
+    height: 23,
+    borderRadius: 8,
+    backgroundColor: colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-      borderWidth: 1.5,
-      borderColor:
-        colors.border,
+  /* SELECTED ITEM */
 
-      justifyContent:
-        "center",
-      alignItems: "center",
-    },
+  selectedItemSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 13,
+    marginBottom: 30,
+  },
 
-    checkboxSelected: {
-      backgroundColor:
-        colors.accent,
+  selectedItemImage: {
+    width: 64,
+    height: 64,
+    marginRight: 13,
+  },
 
-      borderColor:
-        colors.accent,
-    },
+  selectedItemInfo: {
+    flex: 1,
+  },
 
-    checkmark: {
-      color: "#FFFFFF",
-      fontSize: 14,
-      fontWeight: "700",
-    },
+  selectedItemLabel: {
+    fontFamily: typography.bold,
+    fontSize: 9,
+    letterSpacing: 1.1,
+    color: colors.accent,
+    marginBottom: 3,
+  },
 
-    materialNameContainer: {
-      flex: 1,
-      paddingLeft: 12,
-    },
+  selectedItemName: {
+    fontFamily: typography.bold,
+    fontSize: 15,
+    color: colors.text,
+  },
 
-    materialName: {
-      fontSize: 14,
-      color: colors.text,
-    },
+  selectedItemCategory: {
+    fontFamily: typography.regular,
+    fontSize: 11,
+    color: colors.secondaryText,
+    marginTop: 3,
+  },
 
-    percentageInput: {
-      width: 54,
-      height: 38,
+  /* MATERIALS */
 
-      borderWidth: 1,
-      borderColor:
-        colors.border,
+  materialCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    marginBottom: 30,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+  },
 
-      borderRadius: 10,
+  materialRow: {
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
 
-      backgroundColor:
-        colors.background,
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-      textAlign: "center",
+  checkboxSelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
 
-      fontSize: 14,
-      color: colors.text,
-    },
+  materialNameContainer: {
+    flex: 1,
+    paddingLeft: 12,
+  },
 
-    percentageInputDisabled: {
-      opacity: 0.4,
-    },
+  materialName: {
+    fontFamily: typography.medium,
+    fontSize: 13,
+    color: colors.text,
+  },
 
-    percentSymbol: {
-      width: 24,
-      marginLeft: 5,
-      fontSize: 14,
-      color:
-        colors.secondaryText,
-    },
+  percentageInput: {
+    width: 52,
+    height: 38,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+    textAlign: "center",
+    fontFamily: typography.semibold,
+    fontSize: 13,
+    color: colors.text,
+  },
 
-    totalRow: {
-      minHeight: 58,
+  percentageInputDisabled: {
+    opacity: 0.35,
+  },
 
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "space-between",
-    },
+  percentSymbol: {
+    width: 22,
+    marginLeft: 5,
+    fontFamily: typography.medium,
+    fontSize: 13,
+    color: colors.secondaryText,
+  },
 
-    totalLabel: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: colors.text,
-    },
+  /* TOTAL */
 
-    totalValue: {
-      fontSize: 15,
-      fontWeight: "700",
-      color:
-        colors.secondaryText,
-    },
+  totalRow: {
+    minHeight: 68,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
 
-    totalComplete: {
-      color: colors.accent,
-    },
+  totalLabel: {
+    fontFamily: typography.bold,
+    fontSize: 10,
+    letterSpacing: 1,
+    color: colors.text,
+  },
 
-    careCard: {
-      padding: 18,
-      marginBottom: 22,
+  totalHint: {
+    fontFamily: typography.regular,
+    fontSize: 11,
+    color: colors.secondaryText,
+    marginTop: 3,
+  },
 
-      backgroundColor:
-        colors.surface,
+  totalBadge: {
+    minWidth: 62,
+    height: 34,
+    borderRadius: 11,
+    paddingHorizontal: 10,
+    backgroundColor: colors.background,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
 
-      borderWidth: 1,
-      borderColor:
-        colors.border,
+  totalBadgeComplete: {
+    backgroundColor: colors.accent,
+  },
 
-      borderRadius: 20,
-    },
+  totalValue: {
+    fontFamily: typography.bold,
+    fontSize: 13,
+    color: colors.secondaryText,
+  },
 
-    careHeading: {
-      fontSize: 15,
-      fontWeight: "700",
-      color: colors.text,
-    },
+  totalValueComplete: {
+    color: "#FFFFFF",
+  },
 
-    careText: {
-      marginTop: 8,
-      fontSize: 13,
-      lineHeight: 20,
-      color:
-        colors.secondaryText,
-    },
+  /* CARE GUIDE */
 
-    notice: {
-      marginTop: 16,
-      padding: 13,
+  careCard: {
+    marginBottom: 22,
+    backgroundColor: colors.surface,
+    borderRadius: 22,
+    overflow: "hidden",
+  },
 
-      backgroundColor:
-        colors.background,
+  careGuideHeader: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: 19,
+    paddingVertical: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
 
-      borderRadius: 12,
-    },
+  careEyebrow: {
+    fontFamily: typography.bold,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.65)",
+    marginBottom: 3,
+  },
 
-    noticeText: {
-      fontSize: 12,
-      lineHeight: 18,
-      color:
-        colors.secondaryText,
-    },
+  careGuideTitle: {
+    fontFamily: typography.bold,
+    fontSize: 19,
+    letterSpacing: -0.4,
+    color: "#FFFFFF",
+  },
 
-    saveButton: {
-      minHeight: 54,
+  careGuideIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-      justifyContent:
-        "center",
-      alignItems: "center",
+  careList: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+  },
 
-      backgroundColor:
-        colors.accent,
+  careRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 17,
+  },
 
-      borderRadius: 18,
-    },
+  careIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.accentLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
 
-    saveButtonText: {
-      color: "#FFFFFF",
-      fontSize: 15,
-      fontWeight: "700",
-    },
-    careBasedOn: {
-  marginBottom: 18,
-  fontSize: 12,
-  fontWeight: "600",
-  color: colors.secondaryText,
-},
+  careContent: {
+    flex: 1,
+  },
 
-careSection: {
-  marginBottom: 18,
-},
+  careHeading: {
+    fontFamily: typography.bold,
+    fontSize: 14,
+    color: colors.text,
+  },
 
-noticeTitle: {
-  marginBottom: 5,
-  fontSize: 12,
-  fontWeight: "700",
-  color: colors.text,
-},
-  });
+  careText: {
+    marginTop: 4,
+    fontFamily: typography.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.secondaryText,
+  },
+
+  careDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginLeft: 50,
+  },
+
+  /* EMPTY CARE GUIDE */
+
+  emptyCareGuide: {
+    alignItems: "center",
+    paddingHorizontal: 25,
+    paddingTop: 28,
+    paddingBottom: 24,
+  },
+
+  emptyCareIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: colors.accentLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  emptyCareTitle: {
+    fontFamily: typography.bold,
+    fontSize: 15,
+    color: colors.text,
+  },
+
+  emptyCareText: {
+    fontFamily: typography.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.secondaryText,
+    textAlign: "center",
+    marginTop: 5,
+  },
+
+  /* NOTICE */
+
+  notice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    margin: 14,
+    marginTop: 6,
+    padding: 14,
+    backgroundColor: colors.accentLight,
+    borderRadius: 14,
+  },
+
+  noticeContent: {
+    flex: 1,
+  },
+
+  noticeTitle: {
+    marginBottom: 4,
+    fontFamily: typography.bold,
+    fontSize: 12,
+    color: colors.text,
+  },
+
+  noticeText: {
+    fontFamily: typography.regular,
+    fontSize: 11,
+    lineHeight: 17,
+    color: colors.secondaryText,
+  },
+
+  /* SAVE */
+
+  saveButton: {
+    minHeight: 56,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: 16,
+  },
+
+  saveButtonIncomplete: {
+    opacity: 0.45,
+  },
+
+  saveButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  saveButtonText: {
+    fontFamily: typography.bold,
+    color: "#FFFFFF",
+    fontSize: 15,
+  },
+});
