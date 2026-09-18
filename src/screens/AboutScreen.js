@@ -1,12 +1,16 @@
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
+
 import SafeScreen from "../components/SafeScreen";
 import { colors } from "../constants/colors";
+import { typography } from "../constants/typography";
 
 export default function AboutScreen() {
   return (
@@ -16,21 +20,19 @@ export default function AboutScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={styles.logoPlaceholder}>
-            <Text style={styles.logoText}>
-              DC
-            </Text>
-          </View>
+        <Image
+  source={require("../../assets/Wearly-logo.png")}
+  style={styles.logo}
+  resizeMode="contain"
+/>
 
-          <Text style={styles.title}>
-            Digital Closet
-          </Text>
+<Text style={styles.title}>
+  Wearly
+</Text>
 
           <Text style={styles.version}>
             Version 1.0.0
           </Text>
-        </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>
@@ -38,7 +40,7 @@ export default function AboutScreen() {
           </Text>
 
           <Text style={styles.bodyText}>
-            Digital Closet is a personal
+            Wearly is a personal
             wardrobe management app designed
             to make organizing clothes and
             creating outfits easier.
@@ -126,7 +128,7 @@ export default function AboutScreen() {
         </View>
 
         <Text style={styles.footer}>
-          Digital Closet • Version 1.0.0
+          Wearly • Version 1.0.0
         </Text>
       </ScrollView>
     </SafeScreen>
@@ -150,33 +152,25 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
 
-  logoPlaceholder: {
-    width: 82,
-    height: 82,
-    borderRadius: 24,
-    backgroundColor: colors.accent,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
+ logo: {
+  width: 150,
+  height: 150,
+  marginBottom: 10,
+},
 
-  logoText: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  title: {
-    fontSize: 27,
-    fontWeight: "700",
-    color: colors.text,
-  },
+ title: {
+  fontFamily: typography.extraBold,
+  fontSize: 30,
+  letterSpacing: -0.8,
+  color: colors.text,
+},
 
   version: {
-    marginTop: 5,
-    fontSize: 13,
-    color: colors.secondaryText,
-  },
+  marginTop: 4,
+  fontFamily: typography.medium,
+  fontSize: 12,
+  color: colors.secondaryText,
+},
 
   card: {
     backgroundColor: colors.surface,
@@ -188,35 +182,37 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    marginBottom: 12,
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.text,
-  },
+  marginBottom: 12,
+  fontFamily: typography.bold,
+  fontSize: 16,
+  color: colors.text,
+},
 
   bodyText: {
-    marginBottom: 12,
-    fontSize: 13,
-    lineHeight: 21,
-    color: colors.secondaryText,
-  },
+  marginBottom: 12,
+  fontFamily: typography.regular,
+  fontSize: 13,
+  lineHeight: 21,
+  color: colors.secondaryText,
+},
 
   featureRow: {
     paddingVertical: 4,
   },
 
   featureTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-  },
+  fontFamily: typography.semibold,
+  fontSize: 14,
+  color: colors.text,
+},
 
   featureText: {
-    marginTop: 5,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.secondaryText,
-  },
+  marginTop: 5,
+  fontFamily: typography.regular,
+  fontSize: 12,
+  lineHeight: 18,
+  color: colors.secondaryText,
+},
 
   divider: {
     height: 1,
@@ -225,9 +221,10 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 10,
-    textAlign: "center",
-    fontSize: 11,
-    color: colors.secondaryText,
-  },
+  marginTop: 10,
+  textAlign: "center",
+  fontFamily: typography.medium,
+  fontSize: 11,
+  color: colors.secondaryText,
+},
 });

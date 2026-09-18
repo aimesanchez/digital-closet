@@ -1,30 +1,36 @@
 {
   "expo": {
-    "name": "digital-closet",
+    "name": "Wearly",
     "slug": "digital-closet",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Wearly-logo.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F5F3ED",
+          "image": "./assets/splash.png",
+          "imageWidth": 220,
+          "resizeMode": "contain"
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.aimsan33.digitalcloset",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
+        "backgroundColor": "#F5F3ED",
+        "foregroundImage": "./assets/Wearly-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "package": "com.aimsan33.digitalcloset"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "react-native-fast-tflite",
-      "expo-font"
-    ],
     "extra": {
       "eas": {
         "projectId": "94697964-a238-4feb-aae9-4f80d4219586"
