@@ -16,7 +16,7 @@ I built this project to get more experience with mobile development in React Nat
 
 ## Demo
 
-Demo video coming soon.
+[Walkthrough of Wearly: https://youtu.be/gxnzAE_ZYI8 ]
 
 Screenshots:
 
